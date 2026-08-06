@@ -1,13 +1,1514 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <!-- <link rel="icon" type="image/svg+xml" href="/meetscribe.svg" /> -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>MeetScribe</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MeetWise – AI Meeting Transcript & Notes</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --indigo-50:  #EEF2FF;
+      --indigo-100: #E0E7FF;
+      --indigo-200: #C7D2FE;
+      --indigo-400: #818CF8;
+      --indigo-500: #6366F1;
+      --indigo-600: #4F46E5;
+      --indigo-700: #4338CA;
+      --blue-50:    #EFF6FF;
+      --gray-50:    #F9FAFB;
+      --gray-100:   #F3F4F6;
+      --gray-200:   #E5E7EB;
+      --gray-300:   #D1D5DB;
+      --gray-400:   #9CA3AF;
+      --gray-500:   #6B7280;
+      --gray-600:   #4B5563;
+      --gray-700:   #374151;
+      --gray-900:   #111827;
+      --green-100:  #D1FAE5;
+      --green-600:  #059669;
+      --red-100:    #FEE2E2;
+      --red-500:    #EF4444;
+      --red-600:    #DC2626;
+      --yellow-100: #FEF3C7;
+      --yellow-800: #92400E;
+      --white:      #FFFFFF;
+    }
+
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, var(--blue-50) 0%, var(--indigo-50) 100%);
+      min-height: 100vh;
+      color: var(--gray-900);
+      line-height: 1.5;
+    }
+    button, input, select, textarea { font-family: inherit; }
+    a { text-decoration: none; color: inherit; }
+    button { cursor: pointer; }
+
+    /* ---- Pages ---- */
+    .page { display: none; min-height: 100vh; }
+    .page.active { display: flex; flex-direction: column; }
+
+    /* ---- Header ---- */
+    .app-header {
+      background: var(--white);
+      border-bottom: 1px solid var(--gray-200);
+      padding: 0;
+      position: sticky; top: 0; z-index: 50;
+    }
+    .header-inner {
+      max-width: 1280px; margin: 0 auto;
+      padding: 14px 24px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .header-brand {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .brand-icon {
+      width: 40px; height: 40px; background: var(--indigo-600);
+      border-radius: 10px; display: flex; align-items: center; justify-content: center;
+    }
+    .brand-icon svg { width: 20px; height: 20px; color: #fff; stroke: #fff; }
+    .brand-name { font-size: 22px; font-weight: 700; color: var(--gray-900); }
+    .header-actions { display: flex; gap: 4px; }
+
+    /* ---- Buttons ---- */
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: 500;
+      border: none; transition: background .15s, box-shadow .15s, opacity .15s;
+      white-space: nowrap; cursor: pointer;
+    }
+    .btn svg { width: 16px; height: 16px; flex-shrink: 0; }
+    .btn-primary { background: var(--indigo-600); color: #fff; }
+    .btn-primary:hover { background: var(--indigo-700); }
+    .btn-outline { background: transparent; color: var(--gray-700); border: 1px solid var(--gray-300); }
+    .btn-outline:hover { background: var(--gray-50); }
+    .btn-ghost { background: transparent; color: var(--gray-600); }
+    .btn-ghost:hover { background: var(--gray-100); }
+    .btn-destructive { background: var(--red-500); color: #fff; }
+    .btn-destructive:hover { background: var(--red-600); }
+    .btn-lg { padding: 11px 22px; font-size: 15px; }
+    .btn-sm { padding: 5px 12px; font-size: 13px; }
+    .btn:disabled { opacity: .45; cursor: not-allowed; }
+    .btn-full { width: 100%; justify-content: center; }
+
+    /* ---- Card ---- */
+    .card {
+      background: var(--white);
+      border: 1px solid var(--gray-200);
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    }
+    .card-header { padding: 20px 24px 0; }
+    .card-title { font-size: 17px; font-weight: 600; color: var(--gray-900); margin-bottom: 4px; }
+    .card-desc { font-size: 13px; color: var(--gray-500); }
+    .card-content { padding: 20px 24px; }
+    .card-content-pt { padding: 0 24px 20px; }
+
+    /* ---- Main layout ---- */
+    .main-wrap {
+      flex: 1;
+      max-width: 1280px; margin: 0 auto; width: 100%;
+      padding: 32px 24px;
+    }
+    .main-wrap-narrow {
+      flex: 1;
+      max-width: 900px; margin: 0 auto; width: 100%;
+      padding: 32px 24px;
+    }
+
+    /* ---- Form elements ---- */
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-label { font-size: 14px; font-weight: 500; color: var(--gray-700); }
+    .form-input {
+      padding: 9px 13px; border: 1px solid var(--gray-300); border-radius: 8px;
+      font-size: 14px; color: var(--gray-900); background: var(--white);
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .form-input:focus { outline: none; border-color: var(--indigo-600); box-shadow: 0 0 0 3px rgba(79,70,229,.12); }
+    .form-hint { font-size: 12px; color: var(--gray-400); }
+
+    /* ---- Badge ---- */
+    .badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px 9px; border-radius: 99px; font-size: 12px; font-weight: 500;
+    }
+    .badge-default { background: var(--indigo-600); color: #fff; }
+    .badge-secondary { background: var(--gray-100); color: var(--gray-600); }
+    .badge-outline { background: transparent; border: 1px solid var(--gray-300); color: var(--gray-600); }
+    .badge-green { background: var(--green-100); color: var(--green-600); }
+    .badge-yellow { background: var(--yellow-100); color: var(--yellow-800); }
+    .badge-indigo { background: var(--indigo-100); color: var(--indigo-600); }
+
+    /* ---- Separator ---- */
+    .sep-v { width: 1px; height: 24px; background: var(--gray-200); flex-shrink: 0; }
+    .sep-h { height: 1px; background: var(--gray-200); }
+
+    /* ---- Disclaimer footer ---- */
+    .disclaimer-footer {
+      background: var(--white); border-top: 1px solid var(--gray-200);
+      padding: 14px 24px; margin-top: auto;
+    }
+    .disclaimer-footer p {
+      font-size: 11px; color: var(--gray-500); text-align: center;
+      max-width: 860px; margin: 0 auto; line-height: 1.6;
+    }
+
+    /* ---- LOGIN ---- */
+    .login-wrap {
+      flex: 1; display: flex; align-items: center; justify-content: center; padding: 24px;
+    }
+    .login-card { width: 100%; max-width: 420px; }
+    .login-logo {
+      display: flex; flex-direction: column; align-items: center; gap: 12px;
+      padding: 28px 24px 0;
+    }
+    .login-logo .brand-icon { width: 64px; height: 64px; border-radius: 16px; }
+    .login-logo .brand-icon svg { width: 32px; height: 32px; }
+    .login-logo h1 { font-size: 28px; font-weight: 700; }
+    .login-logo p { font-size: 14px; color: var(--gray-500); text-align: center; }
+    .login-form { display: flex; flex-direction: column; gap: 16px; padding: 24px; }
+    .login-footer-link { text-align: center; }
+    .link { color: var(--indigo-600); font-size: 13px; cursor: pointer; }
+    .link:hover { text-decoration: underline; }
+
+    /* ---- OTP ---- */
+    .otp-grid { display: flex; gap: 10px; justify-content: center; margin: 4px 0; }
+    .otp-cell {
+      width: 52px; height: 60px; border: 1px solid var(--gray-300); border-radius: 10px;
+      text-align: center; font-size: 24px; font-weight: 700; color: var(--gray-900);
+      background: var(--white); transition: border-color .15s, box-shadow .15s;
+    }
+    .otp-cell:focus { outline: none; border-color: var(--indigo-600); box-shadow: 0 0 0 3px rgba(79,70,229,.12); }
+
+    /* ---- DASHBOARD ---- */
+    .section-gap { display: flex; flex-direction: column; gap: 24px; }
+
+    /* Record section */
+    .record-actions {
+      display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 32px;
+    }
+    .record-btns { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+    .recording-live {
+      display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 32px;
+    }
+    .rec-dot { width: 14px; height: 14px; background: var(--red-500); border-radius: 50%; animation: blink 1s infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+    .rec-timer { font-size: 36px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--gray-900); }
+
+    /* Upload zone */
+    .drop-zone {
+      border: 2px dashed var(--gray-300); border-radius: 10px;
+      padding: 48px 24px; text-align: center; cursor: pointer;
+      transition: border-color .15s, background .15s;
+    }
+    .drop-zone:hover, .drop-zone.over { border-color: var(--indigo-500); background: var(--indigo-50); }
+    .drop-zone-icon { margin: 0 auto 12px; color: var(--gray-400); }
+    .drop-zone h3 { font-size: 16px; font-weight: 600; color: var(--gray-700); margin-bottom: 6px; }
+    .drop-zone p { font-size: 13px; color: var(--gray-500); margin-bottom: 16px; line-height: 1.6; }
+
+    /* Upload progress */
+    .progress-row { display: flex; justify-content: space-between; font-size: 13px; color: var(--gray-600); margin-bottom: 6px; }
+    .progress-track { background: var(--gray-200); border-radius: 99px; height: 8px; overflow: hidden; }
+    .progress-fill { height: 100%; background: var(--indigo-600); border-radius: 99px; transition: width .3s ease; }
+
+    /* Consent banner */
+    .consent-banner {
+      background: var(--yellow-100); border: 1px solid #FCD34D; border-radius: 8px;
+      padding: 12px 16px; display: flex; gap: 10px; align-items: flex-start; margin-top: 16px;
+    }
+    .consent-banner p { font-size: 13px; color: var(--yellow-800); line-height: 1.5; }
+    .consent-check-row { display: flex; align-items: flex-start; gap: 8px; margin-top: 8px; }
+    .consent-check-row input[type=checkbox] { margin-top: 2px; accent-color: var(--indigo-600); flex-shrink: 0; }
+    .consent-check-row label { font-size: 13px; color: var(--yellow-800); cursor: pointer; line-height: 1.5; }
+
+    /* File list */
+    .file-row {
+      display: flex; align-items: center; gap: 16px;
+      padding: 20px 24px; border-bottom: 1px solid var(--gray-100);
+      transition: background .1s;
+    }
+    .file-row:last-child { border-bottom: none; }
+    .file-row:hover { background: var(--gray-50); }
+    .file-icon-wrap {
+      width: 48px; height: 48px; background: var(--indigo-100);
+      border-radius: 10px; display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .file-icon-wrap svg { width: 24px; height: 24px; color: var(--indigo-600); stroke: var(--indigo-600); }
+    .file-meta { flex: 1; min-width: 0; }
+    .file-name { font-size: 15px; font-weight: 500; color: var(--gray-900); margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .file-details { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .file-details span { font-size: 13px; color: var(--gray-500); display: flex; align-items: center; gap: 4px; }
+    .file-details svg { width: 12px; height: 12px; }
+    .file-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+    /* ---- TRANSCRIPT ---- */
+    .transcript-search-wrap { position: relative; }
+    .transcript-search-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--gray-400); }
+    .transcript-search-icon svg { width: 16px; height: 16px; }
+    .search-input { padding-left: 36px !important; }
+
+    .segment { display: flex; gap: 16px; padding: 18px 0; border-bottom: 1px solid var(--gray-100); }
+    .segment:last-child { border-bottom: none; }
+    .seg-time { width: 52px; font-size: 13px; color: var(--gray-400); flex-shrink: 0; padding-top: 2px; font-variant-numeric: tabular-nums; }
+    .seg-body { flex: 1; }
+    .seg-speaker { margin-bottom: 6px; }
+    .seg-text { font-size: 14px; color: var(--gray-700); line-height: 1.7; }
+    .masked-span {
+      background: var(--gray-800); color: transparent; border-radius: 3px;
+      user-select: none; cursor: help;
+    }
+    .masked-span:hover { background: var(--gray-500); }
+    .transcript-header-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+    .pii-toggle-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--gray-500); }
+    .toggle-pill {
+      width: 38px; height: 22px; border-radius: 99px; background: var(--indigo-600);
+      cursor: pointer; position: relative; transition: background .2s; flex-shrink: 0;
+    }
+    .toggle-pill.off { background: var(--gray-300); }
+    .toggle-pill::after {
+      content: ''; position: absolute; top: 3px; left: calc(100% - 19px);
+      width: 16px; height: 16px; background: #fff; border-radius: 50%;
+      transition: left .2s; box-shadow: 0 1px 2px rgba(0,0,0,.2);
+    }
+    .toggle-pill.off::after { left: 3px; }
+
+    /* ---- MEETING NOTES ---- */
+    .tabs-list { display: flex; gap: 4px; background: var(--gray-100); border-radius: 8px; padding: 4px; margin-bottom: 20px; }
+    .tab-btn {
+      flex: 1; padding: 8px 14px; border: none; border-radius: 6px;
+      font-size: 13px; font-weight: 500; color: var(--gray-600); background: transparent;
+      cursor: pointer; transition: all .15s;
+    }
+    .tab-btn.active { background: var(--white); color: var(--gray-900); box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    .stat-mini-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 16px; }
+    .stat-mini {
+      background: var(--white); border: 1px solid var(--gray-200); border-radius: 10px;
+      padding: 18px 14px; text-align: center;
+    }
+    .stat-mini svg { width: 28px; height: 28px; color: var(--indigo-600); stroke: var(--indigo-600); margin: 0 auto 8px; display: block; }
+    .stat-mini .num { font-size: 28px; font-weight: 700; color: var(--gray-900); }
+    .stat-mini .lbl { font-size: 12px; color: var(--gray-500); margin-top: 2px; }
+
+    .key-point-list { display: flex; flex-direction: column; gap: 10px; }
+    .key-point { display: flex; gap: 10px; align-items: flex-start; }
+    .key-point-num {
+      width: 24px; height: 24px; background: var(--indigo-100); color: var(--indigo-600);
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 600; flex-shrink: 0;
+    }
+    .key-point-text { font-size: 14px; color: var(--gray-700); line-height: 1.6; padding-top: 3px; }
+
+    .action-item { display: flex; gap: 12px; padding: 14px; background: var(--gray-50); border-radius: 8px; margin-bottom: 10px; }
+    .action-item:last-child { margin-bottom: 0; }
+    .action-check { width: 20px; height: 20px; border: 2px solid var(--gray-300); border-radius: 4px; flex-shrink: 0; margin-top: 2px; }
+    .action-task { font-size: 14px; color: var(--gray-800); margin-bottom: 6px; }
+    .action-meta { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+    .participant-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--gray-100); }
+    .participant-row:last-child { border-bottom: none; }
+    .participant-avatar {
+      width: 32px; height: 32px; background: var(--indigo-100); color: var(--indigo-600);
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 600; flex-shrink: 0;
+    }
+    .participant-name { font-size: 14px; color: var(--gray-700); }
+
+    .decision-row { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--gray-100); }
+    .decision-row:last-child { border-bottom: none; }
+    .decision-check-icon {
+      width: 22px; height: 22px; background: var(--green-100); color: var(--green-600);
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-size: 12px; flex-shrink: 0; margin-top: 2px;
+    }
+    .decision-text { font-size: 14px; color: var(--gray-700); line-height: 1.6; }
+
+    /* ---- Settings ---- */
+    .settings-section { margin-bottom: 20px; }
+    .settings-section .card-header { padding-bottom: 16px; }
+    .settings-row-item { display: flex; align-items: center; justify-content: space-between; padding: 14px 24px; border-bottom: 1px solid var(--gray-100); }
+    .settings-row-item:last-child { border-bottom: none; }
+    .settings-row-lbl { font-size: 14px; font-weight: 500; color: var(--gray-800); }
+    .settings-row-desc { font-size: 12px; color: var(--gray-400); margin-top: 2px; }
+    .sw-pill { width: 40px; height: 22px; border-radius: 99px; background: var(--indigo-600); cursor: pointer; position: relative; transition: background .2s; flex-shrink: 0; }
+    .sw-pill.off { background: var(--gray-300); }
+    .sw-pill::after { content:''; position: absolute; top: 3px; left: calc(100% - 19px); width: 16px; height: 16px; background:#fff; border-radius:50%; transition: left .2s; box-shadow: 0 1px 2px rgba(0,0,0,.2); }
+    .sw-pill.off::after { left: 3px; }
+
+    /* ---- Toast ---- */
+    .toast-wrap { position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+    .toast {
+      background: var(--gray-900); color: #fff;
+      padding: 11px 16px; border-radius: 9px; font-size: 13px; font-weight: 500;
+      display: flex; gap: 8px; align-items: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,.2);
+      animation: slideup .2s ease; pointer-events: all;
+    }
+    @keyframes slideup { from{transform:translateY(10px);opacity:0} to{transform:translateY(0);opacity:1} }
+    .toast.success { border-left: 3px solid #34D399; }
+    .toast.error   { border-left: 3px solid var(--red-500); }
+    .toast.info    { border-left: 3px solid var(--indigo-400); }
+
+    /* ---- Modal ---- */
+    .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 20px; opacity: 0; pointer-events: none; transition: opacity .15s; }
+    .modal-bg.open { opacity: 1; pointer-events: all; }
+    .modal-box { background: var(--white); border-radius: 14px; padding: 28px; max-width: 460px; width: 100%; box-shadow: 0 20px 50px rgba(0,0,0,.15); transform: scale(.96); transition: transform .15s; }
+    .modal-bg.open .modal-box { transform: scale(1); }
+    .modal-title { font-size: 17px; font-weight: 700; color: var(--gray-900); margin-bottom: 10px; }
+    .modal-body { font-size: 14px; color: var(--gray-600); line-height: 1.6; }
+    .modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+    .modal-close-btn { width: 26px; height: 26px; background: var(--gray-100); border: none; border-radius: 6px; cursor: pointer; font-size: 14px; color: var(--gray-500); display: flex; align-items: center; justify-content: center; }
+    .modal-close-btn:hover { background: var(--gray-200); }
+    .modal-header-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+
+    /* ---- Landing page ---- */
+    .landing-nav {
+      background: var(--white);
+      border-bottom: 1px solid var(--gray-200);
+      padding: 0 40px; height: 64px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .landing-hero {
+      background: linear-gradient(135deg, #1E1B4B 0%, #3730A3 60%, #4F46E5 100%);
+      color: #fff;
+      padding: 80px 40px 72px;
+      text-align: center;
+      display: flex; flex-direction: column; align-items: center;
+    }
+    .landing-hero h1 {
+      font-size: 48px; font-weight: 800; line-height: 1.15;
+      max-width: 680px; margin-bottom: 18px;
+    }
+    .landing-hero h1 span {
+      background: linear-gradient(90deg, #A5B4FC, #C4B5FD);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .landing-hero p {
+      font-size: 17px; color: rgba(255,255,255,.75);
+      max-width: 520px; margin-bottom: 32px; line-height: 1.7;
+    }
+    .landing-hero-btns { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+    .btn-hero-white {
+      padding: 13px 26px; border-radius: 9px; font-size: 15px; font-weight: 700;
+      background: #fff; color: var(--indigo-600); border: none; cursor: pointer;
+      transition: transform .15s, box-shadow .15s;
+    }
+    .btn-hero-white:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,.25); }
+    .btn-hero-ghost {
+      padding: 13px 26px; border-radius: 9px; font-size: 15px; font-weight: 600;
+      background: transparent; color: #fff; border: 2px solid rgba(255,255,255,.4);
+      cursor: pointer; transition: background .15s;
+    }
+    .btn-hero-ghost:hover { background: rgba(255,255,255,.12); }
+
+    .landing-features {
+      max-width: 1100px; margin: 0 auto;
+      padding: 64px 40px;
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
+    }
+    .feature-card {
+      background: var(--white); border: 1px solid var(--gray-200);
+      border-radius: 12px; padding: 24px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.05);
+      transition: transform .15s, box-shadow .15s;
+    }
+    .feature-card:hover { transform: translateY(-3px); box-shadow: 0 6px 18px rgba(0,0,0,.08); }
+    .feature-icon-wrap {
+      width: 44px; height: 44px; border-radius: 10px;
+      background: var(--indigo-100);
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 14px;
+    }
+    .feature-icon-wrap svg { width: 22px; height: 22px; stroke: var(--indigo-600); }
+    .feature-card h3 { font-size: 15px; font-weight: 700; color: var(--gray-900); margin-bottom: 6px; }
+    .feature-card p { font-size: 13px; color: var(--gray-500); line-height: 1.6; }
+
+    .landing-cta {
+      background: var(--indigo-600); color: #fff;
+      text-align: center; padding: 60px 40px;
+    }
+    .landing-cta h2 { font-size: 30px; font-weight: 800; margin-bottom: 10px; }
+    .landing-cta p { font-size: 15px; opacity: .8; margin-bottom: 24px; }
+
+    .landing-footer {
+      background: var(--gray-900); color: rgba(255,255,255,.5);
+      padding: 20px 40px; display: flex; justify-content: space-between;
+      align-items: center; font-size: 12px;
+    }
+    .landing-footer span { color: #fff; font-weight: 700; font-size: 15px; }
+
+    @media (max-width:760px) {
+      .landing-hero h1 { font-size: 32px; }
+      .landing-features { grid-template-columns: 1fr; padding: 40px 20px; }
+      .landing-nav { padding: 0 16px; }
+    }
+
+    @media (max-width:640px) {
+      .header-inner { padding: 12px 16px; }
+      .main-wrap, .main-wrap-narrow { padding: 20px 16px; }
+      .file-actions { flex-direction: column; }
+      .stat-mini-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════ LANDING ═══════════════ -->
+<div id="pg-landing" class="page active">
+  <nav class="landing-nav">
+    <div class="header-brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+      </div>
+      <span class="brand-name">MeetWise</span>
+    </div>
+    <button class="btn btn-primary" onclick="goPage('pg-login')">Sign in</button>
+  </nav>
+
+  <div class="landing-hero">
+    <h1>Turn meetings into<br/><span>actionable notes</span> instantly</h1>
+    <p>Upload a recording or transcript and MeetWise uses AI to generate accurate transcripts and structured meeting notes — with your privacy at the core.</p>
+    <div class="landing-hero-btns">
+      <button class="btn-hero-white" onclick="goPage('pg-login')">Get started for free</button>
+    </div>
+  </div>
+
+  <div style="background:var(--white);">
+    <div class="landing-features">
+      <div class="feature-card">
+        <div class="feature-icon-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+        </div>
+        <h3>AI Transcription</h3>
+        <p>Self-hosted Whisper converts audio and video to timestamped text. Your recordings never touch a third-party cloud.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        </div>
+        <h3>Smart Meeting Notes</h3>
+        <p>Gemini AI structures your transcript into a summary, key decisions, action items, and participant list automatically.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+        <h3>Privacy First</h3>
+        <p>All files are deleted after processing. PII is automatically masked. Notes stay encrypted in your own browser.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+        </div>
+        <h3>Record in Browser</h3>
+        <p>Start a live audio or video recording directly from the dashboard — no extra software needed.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        </div>
+        <h3>Flexible Export</h3>
+        <p>Download your transcript and notes as PDF or TXT with one click. Your data, your format.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <h3>Secure by Default</h3>
+        <p>Two-factor authentication, bcrypt password hashing, and AES-256 encrypted local storage protect your account.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="landing-footer">
+    <span>MeetWise</span>
+    <div>ICT307 Project 1 · S1 2026</div>
+    <div>Privacy Policy · Terms of Service</div>
+  </div>
+</div>
+
+<!-- ═══════════════ LOGIN ═══════════════ -->
+<div id="pg-login" class="page">
+  <div class="login-wrap">
+    <div class="card login-card">
+      <div class="login-logo">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+        </div>
+        <h1>MeetWise</h1>
+        <p>Transform your meeting recordings into<br/>transcripts and actionable notes</p>
+      </div>
+      <div class="login-form">
+        <div class="form-group">
+          <label class="form-label" for="l-email">Email</label>
+          <input class="form-input" id="l-email" type="email" placeholder="you@example.com" value="alex@example.com" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="l-pass">Password</label>
+          <input class="form-input" id="l-pass" type="password" placeholder="Enter your password" value="••••••••••••" />
+        </div>
+        <button class="btn btn-primary btn-full btn-lg" onclick="goPage('pg-otp')">Sign In</button>
+        <div class="login-footer-link">
+          <span class="link">Forgot password?</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="disclaimer-footer">
+    <p><strong>Disclaimer:</strong> This is a prototype application. By using MeetWise, you acknowledge that all uploaded files are processed securely. We do not store your recordings longer than necessary for processing. This service is provided "as is" without warranty. Please ensure all participants have consented to recording and transcription.</p>
+  </div>
+</div>
+
+<!-- ═══════════════ OTP ═══════════════ -->
+<div id="pg-otp" class="page">
+  <div class="login-wrap">
+    <div class="card login-card">
+      <div class="login-logo">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+        <h1>Verify identity</h1>
+        <p>We sent a 6-digit code to<br/><strong>+61 4•• ••• 123</strong> via SMS</p>
+      </div>
+      <div class="login-form" style="padding-top:8px;">
+        <div style="background:var(--indigo-50);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--indigo-600);text-align:center;">
+          Code valid for 10 minutes · via Twilio SMS
+        </div>
+        <div class="otp-grid">
+          <input class="otp-cell" maxlength="1" oninput="otpFwd(this,0)" onkeydown="otpBwd(event,this,0)" />
+          <input class="otp-cell" maxlength="1" oninput="otpFwd(this,1)" onkeydown="otpBwd(event,this,1)" />
+          <input class="otp-cell" maxlength="1" oninput="otpFwd(this,2)" onkeydown="otpBwd(event,this,2)" />
+          <input class="otp-cell" maxlength="1" oninput="otpFwd(this,3)" onkeydown="otpBwd(event,this,3)" />
+          <input class="otp-cell" maxlength="1" oninput="otpFwd(this,4)" onkeydown="otpBwd(event,this,4)" />
+          <input class="otp-cell" maxlength="1" oninput="otpFwd(this,5)" onkeydown="otpBwd(event,this,5)" />
+        </div>
+        <button class="btn btn-primary btn-full btn-lg" onclick="goPage('pg-dashboard');toast('Signed in successfully','success')">Verify &amp; continue</button>
+        <div class="login-footer-link" style="display:flex;justify-content:space-between;">
+          <span class="link" onclick="goPage('pg-login')">← Back</span>
+          <span class="link">Resend code</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="disclaimer-footer">
+    <p><strong>Disclaimer:</strong> This is a prototype application. By using MeetWise, you acknowledge that all uploaded files are processed securely. We do not store your recordings longer than necessary for processing.</p>
+  </div>
+</div>
+
+<!-- ═══════════════ DASHBOARD ═══════════════ -->
+<div id="pg-dashboard" class="page">
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="header-brand">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+        </div>
+        <span class="brand-name">MeetWise</span>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-ghost" onclick="goPage('pg-settings')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>
+          Account
+        </button>
+        <button class="btn btn-ghost" onclick="goPage('pg-settings')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          Settings
+        </button>
+        <button class="btn btn-ghost" onclick="goPage('pg-login')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Logout
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <div class="main-wrap">
+    <div class="section-gap">
+
+      <!-- Record card -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Record Meeting</div>
+          <div class="card-desc">Record a meeting directly in your browser using your microphone or camera</div>
+        </div>
+        <div class="card-content">
+          <div id="record-idle" class="record-actions">
+            <div class="record-btns">
+              <button class="btn btn-primary btn-lg" onclick="startRec('audio')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+                Record Audio
+              </button>
+              <button class="btn btn-outline btn-lg" onclick="startRec('video')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                Record Video
+              </button>
+            </div>
+          </div>
+          <div id="record-live" class="recording-live" style="display:none;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div class="rec-dot"></div>
+              <span id="rec-type-label" style="font-size:16px;color:var(--gray-700);">Recording Audio...</span>
+            </div>
+            <div class="rec-timer" id="rec-timer">00:00</div>
+            <button class="btn btn-destructive btn-lg" onclick="stopRec()">
+              <svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+              Stop Recording
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Upload card -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Upload Files</div>
+          <div class="card-desc">Upload meeting recordings (audio/video) to generate transcripts, or upload existing transcript files</div>
+        </div>
+        <div class="card-content">
+          <div class="drop-zone" id="drop-zone" onclick="triggerFileInput()" ondragover="dzOver(event)" ondragleave="dzLeave()" ondrop="dzDrop(event)">
+            <svg class="drop-zone-icon" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <h3>Drag and drop your files here</h3>
+            <p>Audio/Video: MP3, MP4, WAV, M4A, etc.<br/>Transcripts: TXT, DOCX, PDF, SRT, VTT</p>
+            <button class="btn btn-primary" onclick="event.stopPropagation();triggerFileInput()">Browse Files</button>
+          </div>
+          <input type="file" id="file-input" style="display:none;" accept="audio/*,video/*,.txt,.docx,.pdf,.srt,.vtt" multiple onchange="handleFiles(this.files)" />
+
+          <!-- Consent (shown when file selected) -->
+          <div id="consent-section" style="display:none;">
+            <div class="consent-banner">
+              <span style="font-size:18px;flex-shrink:0;">⚠️</span>
+              <div>
+                <strong style="font-size:13px;">Consent required before processing</strong>
+                <p>Before we process your file, you must confirm all meeting participants have consented to recording and AI-based processing.</p>
+                <div class="consent-check-row">
+                  <input type="checkbox" id="consent-cb" onchange="updateConsentBtn()" />
+                  <label for="consent-cb">I confirm all participants have consented to being recorded and to AI-based processing of this meeting.</label>
+                </div>
+              </div>
+            </div>
+            <div style="margin-top:12px;background:var(--indigo-50);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--indigo-600);line-height:1.6;">
+              🤖 <strong>Note:</strong> Transcript text will be sent to Google Gemini API for note generation. Your audio is never sent to Google — only the text transcript.
+            </div>
+            <div style="margin-top:12px;display:flex;gap:10px;align-items:center;">
+              <button class="btn btn-primary" id="process-btn" disabled onclick="startProcessing()">Process File</button>
+              <button class="btn btn-ghost" onclick="cancelUpload()">Cancel</button>
+            </div>
+          </div>
+
+          <!-- Upload progress -->
+          <div id="upload-progress" style="display:none;margin-top:16px;">
+            <div class="progress-row"><span>Uploading...</span><span id="prog-pct">0%</span></div>
+            <div class="progress-track"><div class="progress-fill" id="prog-bar" style="width:0%"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Files list -->
+      <div>
+        <h2 style="font-size:22px;font-weight:700;color:var(--gray-900);margin-bottom:16px;">Your Files</h2>
+        <div class="card" style="padding:0;overflow:hidden;" id="files-list">
+          <!-- rows injected by JS -->
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="disclaimer-footer">
+    <p><strong>Disclaimer:</strong> This is a prototype application. By using MeetWise, you acknowledge that all uploaded files are processed securely. We do not store your recordings longer than necessary for processing. This service is provided "as is" without warranty. Please ensure all participants have consented to recording and transcription where required by law.</p>
+  </div>
+</div>
+
+<!-- ═══════════════ TRANSCRIPT ═══════════════ -->
+<div id="pg-transcript" class="page">
+  <header class="app-header">
+    <div class="header-inner">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <button class="btn btn-ghost" onclick="goPage('pg-dashboard')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          Back
+        </button>
+        <div class="sep-v"></div>
+        <div class="header-brand">
+          <div class="brand-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+          </div>
+          <div>
+            <div style="font-size:16px;font-weight:600;">Q4 Strategy Meeting.mp4</div>
+            <div style="font-size:12px;color:var(--gray-400);">45:32 · May 18, 2026</div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-outline" onclick="openModal('export-modal')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export
+        </button>
+        <button class="btn btn-outline" onclick="openModal('edit-transcript-modal')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Edit
+        </button>
+        <button class="btn btn-primary" onclick="goPage('pg-notes')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"/><path d="M19 3v4"/><path d="M21 5h-4"/></svg>
+          Generate Notes
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <div class="main-wrap-narrow">
+    <div class="section-gap">
+
+      <!-- Search -->
+      <div class="card card-content" style="padding:14px 16px;">
+        <div class="transcript-search-wrap">
+          <span class="transcript-search-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
+          <input class="form-input search-input" id="transcript-search" placeholder="Search transcript..." oninput="filterTranscript(this.value)" style="width:100%;" />
+        </div>
+      </div>
+
+      <!-- Transcript -->
+      <div class="card">
+        <div class="card-header" style="padding-bottom:14px;">
+          <div class="transcript-header-row">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span class="card-title">Transcript</span>
+              <span class="badge badge-secondary" id="seg-count">10 segments</span>
+            </div>
+            <div class="pii-toggle-row">
+              <div class="toggle-pill" id="pii-toggle" onclick="togglePII()"></div>
+              <span>PII masking</span>
+            </div>
+          </div>
+        </div>
+        <div class="card-content" id="transcript-content" style="padding-top:0;">
+          <!-- segments injected by JS -->
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="disclaimer-footer">
+    <p><strong>Disclaimer:</strong> This is a prototype application. We do not store your recordings longer than necessary for processing. Please ensure all participants have consented to recording and transcription.</p>
+  </div>
+</div>
+
+<!-- ═══════════════ MEETING NOTES ═══════════════ -->
+<div id="pg-notes" class="page">
+  <header class="app-header">
+    <div class="header-inner">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <button class="btn btn-ghost" onclick="goPage('pg-dashboard')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          Back
+        </button>
+        <div class="sep-v"></div>
+        <div class="header-brand">
+          <div class="brand-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+          </div>
+          <div>
+            <div style="font-size:16px;font-weight:600;">Q4 Strategy Meeting.mp4</div>
+            <div style="font-size:12px;color:var(--gray-400);">45:32 · May 18, 2026</div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-outline" onclick="goPage('pg-transcript')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          View Transcript
+        </button>
+        <button class="btn btn-outline" onclick="openModal('edit-notes-modal')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Edit
+        </button>
+        <button class="btn btn-outline" id="copy-btn" onclick="copyNotes()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          Copy All
+        </button>
+        <button class="btn btn-primary" onclick="openModal('export-modal');toast('Preparing export...','info')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <div class="main-wrap-narrow">
+    <div class="tabs-list">
+      <button class="tab-btn active" onclick="switchTab(this,'tab-overview')">Overview</button>
+      <button class="tab-btn" onclick="switchTab(this,'tab-actions')">Action Items</button>
+      <button class="tab-btn" onclick="switchTab(this,'tab-details')">Details</button>
+    </div>
+
+    <!-- Overview tab -->
+    <div class="tab-panel active" id="tab-overview">
+      <div class="section-gap">
+        <div class="card">
+          <div class="card-header"><div class="card-title">Summary</div></div>
+          <div class="card-content">
+            <p style="font-size:14px;color:var(--gray-700);line-height:1.8;">This Q4 strategy meeting focused on reviewing Q3 performance and planning for the upcoming quarter. The team exceeded revenue targets by 15% and saw a 22% increase in customer acquisition. Key priorities for Q4 include expanding the enterprise client base, launching a new mobile app in mid-November, and improving customer support response times through new hires and AI-powered systems.</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <svg style="width:20px;height:20px;color:var(--indigo-600);stroke:var(--indigo-600);" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <div class="card-title">Key Points</div>
+            </div>
+          </div>
+          <div class="card-content">
+            <div class="key-point-list">
+              <div class="key-point"><div class="key-point-num">1</div><div class="key-point-text">Q3 revenue exceeded targets by 15%</div></div>
+              <div class="key-point"><div class="key-point-num">2</div><div class="key-point-text">Customer acquisition increased by 22% compared to Q2</div></div>
+              <div class="key-point"><div class="key-point-num">3</div><div class="key-point-text">Retention rate improved to 94%</div></div>
+              <div class="key-point"><div class="key-point-num">4</div><div class="key-point-text">All planned product features shipped on time</div></div>
+              <div class="key-point"><div class="key-point-num">5</div><div class="key-point-text">Five warm enterprise leads in pipeline, including two Fortune 500 companies</div></div>
+              <div class="key-point"><div class="key-point-num">6</div><div class="key-point-text">Mobile app scheduled for mid-November release — beta with 200 users showing positive feedback</div></div>
+              <div class="key-point"><div class="key-point-num">7</div><div class="key-point-text">AI-powered ticket triage system expected to reduce support response times by 40%</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="stat-mini-grid">
+          <div class="stat-mini">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            <div class="num">5</div>
+            <div class="lbl">Action Items</div>
+          </div>
+          <div class="stat-mini">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <div class="num">4</div>
+            <div class="lbl">Participants</div>
+          </div>
+          <div class="stat-mini">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <div class="num">4</div>
+            <div class="lbl">Decisions Made</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Action items tab -->
+    <div class="tab-panel" id="tab-actions">
+      <div class="card">
+        <div class="card-header">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <svg style="width:20px;height:20px;stroke:var(--indigo-600);" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            <div class="card-title">Action Items</div>
+          </div>
+        </div>
+        <div class="card-content">
+          <div class="action-item">
+            <div class="action-check"></div>
+            <div style="flex:1;">
+              <div class="action-task">Follow up with two Fortune 500 enterprise leads</div>
+              <div class="action-meta"><span class="badge badge-secondary">David Kim</span><span style="font-size:13px;color:var(--gray-400);">Due: May 25, 2026</span></div>
+            </div>
+          </div>
+          <div class="action-item">
+            <div class="action-check"></div>
+            <div style="flex:1;">
+              <div class="action-task">Complete mobile app beta testing and address feedback</div>
+              <div class="action-meta"><span class="badge badge-secondary">Emily Rodriguez</span><span style="font-size:13px;color:var(--gray-400);">Due: Jun 1, 2026</span></div>
+            </div>
+          </div>
+          <div class="action-item">
+            <div class="action-check"></div>
+            <div style="flex:1;">
+              <div class="action-task">Finalize hiring for support specialist positions</div>
+              <div class="action-meta"><span class="badge badge-secondary">Michael Torres</span><span style="font-size:13px;color:var(--gray-400);">Due: May 30, 2026</span></div>
+            </div>
+          </div>
+          <div class="action-item">
+            <div class="action-check"></div>
+            <div style="flex:1;">
+              <div class="action-task">Deploy AI-powered ticket triage system</div>
+              <div class="action-meta"><span class="badge badge-secondary">Michael Torres</span><span style="font-size:13px;color:var(--gray-400);">Due: Jun 15, 2026</span></div>
+            </div>
+          </div>
+          <div class="action-item">
+            <div class="action-check"></div>
+            <div style="flex:1;">
+              <div class="action-task">Schedule Q4 goals review meeting</div>
+              <div class="action-meta"><span class="badge badge-secondary">Sarah Chen</span><span style="font-size:13px;color:var(--gray-400);">Due: May 22, 2026</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Details tab -->
+    <div class="tab-panel" id="tab-details">
+      <div class="section-gap">
+        <div class="card">
+          <div class="card-header">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <svg style="width:20px;height:20px;stroke:var(--indigo-600);" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              <div class="card-title">Participants</div>
+            </div>
+          </div>
+          <div class="card-content">
+            <div class="participant-row"><div class="participant-avatar">S</div><div class="participant-name">Sarah Chen — CEO</div></div>
+            <div class="participant-row"><div class="participant-avatar">M</div><div class="participant-name">Michael Torres — VP of Operations</div></div>
+            <div class="participant-row"><div class="participant-avatar">E</div><div class="participant-name">Emily Rodriguez — Head of Product</div></div>
+            <div class="participant-row"><div class="participant-avatar">D</div><div class="participant-name">David Kim — Sales Director</div></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <svg style="width:20px;height:20px;stroke:var(--indigo-600);" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <div class="card-title">Decisions Made</div>
+            </div>
+          </div>
+          <div class="card-content">
+            <div class="decision-row"><div class="decision-check-icon">✓</div><div class="decision-text">Approved budget increase for enterprise sales team</div></div>
+            <div class="decision-row"><div class="decision-check-icon">✓</div><div class="decision-text">Confirmed mobile app launch date for mid-November</div></div>
+            <div class="decision-row"><div class="decision-check-icon">✓</div><div class="decision-text">Agreed to prioritize AI-powered support system implementation</div></div>
+            <div class="decision-row"><div class="decision-check-icon">✓</div><div class="decision-text">Set Q4 revenue target at 20% growth over Q3</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="disclaimer-footer">
+    <p><strong>Disclaimer:</strong> This is a prototype application. We do not store your recordings longer than necessary for processing. Meeting notes are generated by Google Gemini API. Please review Google's AI data usage policy. This service is provided "as is" without warranty.</p>
+  </div>
+</div>
+
+<!-- ═══════════════ SETTINGS ═══════════════ -->
+<div id="pg-settings" class="page">
+  <header class="app-header">
+    <div class="header-inner">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <button class="btn btn-ghost" onclick="goPage('pg-dashboard')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          Back
+        </button>
+        <div class="sep-v"></div>
+        <div class="header-brand">
+          <div class="brand-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+          </div>
+          <span class="brand-name">MeetWise</span>
+        </div>
+      </div>
+      <button class="btn btn-ghost" onclick="goPage('pg-login')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Logout
+      </button>
+    </div>
+  </header>
+
+  <div class="main-wrap-narrow" style="max-width:680px;">
+    <h1 style="font-size:24px;font-weight:700;color:var(--gray-900);margin-bottom:24px;">Account Settings</h1>
+
+    <div class="section-gap">
+      <div class="card settings-section">
+        <div class="card-header"><div class="card-title">Personal Information</div></div>
+        <div class="card-content" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="form-group"><label class="form-label">First name</label><input class="form-input" value="Alex" /></div>
+          <div class="form-group"><label class="form-label">Last name</label><input class="form-input" value="Johnson" /></div>
+          <div class="form-group" style="grid-column:1/-1;"><label class="form-label">Email</label><input class="form-input" value="alex@example.com" /></div>
+          <div class="form-group" style="grid-column:1/-1;"><label class="form-label">Phone number</label><input class="form-input" value="+61 400 123 456" /></div>
+          <div style="grid-column:1/-1;"><button class="btn btn-primary" onclick="toast('Profile saved!','success')">Save changes</button></div>
+        </div>
+      </div>
+
+      <div class="card settings-section">
+        <div class="card-header"><div class="card-title">Security</div><div class="card-desc">Manage your password and two-factor authentication</div></div>
+        <div>
+          <div class="settings-row-item">
+            <div><div class="settings-row-lbl">Password</div><div class="settings-row-desc">Last changed 14 days ago</div></div>
+            <button class="btn btn-outline btn-sm" onclick="toast('Change password flow','info')">Change</button>
+          </div>
+          <div class="settings-row-item">
+            <div><div class="settings-row-lbl">Two-factor authentication</div><div class="settings-row-desc">SMS OTP via Twilio · Required for all accounts</div></div>
+            <span class="badge badge-green">Active</span>
+          </div>
+          <div class="settings-row-item">
+            <div><div class="settings-row-lbl">Active sessions</div><div class="settings-row-desc">2 devices signed in</div></div>
+            <button class="btn btn-destructive btn-sm" onclick="toast('Other sessions revoked','success')">Revoke others</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card settings-section">
+        <div class="card-header"><div class="card-title">Privacy</div><div class="card-desc">Control how your data is handled</div></div>
+        <div>
+          <div class="settings-row-item">
+            <div><div class="settings-row-lbl">PII masking</div><div class="settings-row-desc">Automatically mask emails, names, and phone numbers</div></div>
+            <div class="sw-pill" onclick="swToggle(this)"></div>
+          </div>
+          <div class="settings-row-item">
+            <div><div class="settings-row-lbl">Training data opt-in</div><div class="settings-row-desc">Allow anonymised transcripts to improve Whisper (off by default)</div></div>
+            <div class="sw-pill off" onclick="swToggle(this)"></div>
+          </div>
+          <div class="settings-row-item">
+            <div><div class="settings-row-lbl">Gemini note generation</div><div class="settings-row-desc">Send transcript to Google Gemini API for notes</div></div>
+            <div class="sw-pill" onclick="swToggle(this)"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card settings-section">
+        <div class="card-header"><div class="card-title">Data</div></div>
+        <div>
+          <div class="settings-row-item">
+            <div><div class="settings-row-lbl">Local storage</div><div class="settings-row-desc">4 notes · 1.2 MB · AES-256 encrypted in browser</div></div>
+            <button class="btn btn-outline btn-sm" onclick="toast('Viewing local data','info')">View</button>
+          </div>
+          <div class="settings-row-item">
+            <div><div class="settings-row-lbl">Export all notes</div><div class="settings-row-desc">Download as ZIP archive</div></div>
+            <button class="btn btn-outline btn-sm" onclick="toast('Preparing export...','info')">Export all</button>
+          </div>
+          <div class="settings-row-item">
+            <div><div class="settings-row-lbl" style="color:var(--red-500);">Delete account</div><div class="settings-row-desc">Permanently remove your account and all data</div></div>
+            <button class="btn btn-destructive btn-sm" onclick="openModal('delete-modal')">Delete</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="disclaimer-footer">
+    <p><strong>Disclaimer:</strong> This is a prototype application. We do not store your recordings longer than necessary for processing. This service is provided "as is" without warranty.</p>
+  </div>
+</div>
+
+<!-- ═══════════════ MODALS ═══════════════ -->
+<div class="modal-bg" id="export-modal">
+  <div class="modal-box">
+    <div class="modal-header-row">
+      <div class="modal-title">Export</div>
+      <button class="modal-close-btn" onclick="closeModal('export-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="margin-bottom:14px;">Choose what to include in your export.</p>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;padding:10px;background:var(--gray-50);border-radius:8px;">
+          <input type="checkbox" checked style="accent-color:var(--indigo-600);" /> Full transcript (with timestamps)
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;padding:10px;background:var(--gray-50);border-radius:8px;">
+          <input type="checkbox" checked style="accent-color:var(--indigo-600);" /> Meeting notes (summary, decisions, actions)
+        </label>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Format</label>
+        <select class="form-input">
+          <option>PDF</option><option>TXT</option><option>Both (ZIP)</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('export-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="closeModal('export-modal');toast('Download started!','success')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="delete-modal">
+  <div class="modal-box">
+    <div class="modal-header-row">
+      <div class="modal-title" style="color:var(--red-500);">Delete account</div>
+      <button class="modal-close-btn" onclick="closeModal('delete-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p>This is <strong>permanent and irreversible</strong>. Your account and all locally stored notes will be deleted.</p>
+      <div style="background:var(--red-100);border-radius:8px;padding:10px 14px;margin-top:12px;font-size:13px;color:var(--red-600);">⚠️ Export any notes you want to keep before deleting.</div>
+      <div class="form-group" style="margin-top:14px;">
+        <label class="form-label">Type <strong>DELETE</strong> to confirm</label>
+        <input class="form-input" placeholder="DELETE" />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('delete-modal')">Cancel</button>
+      <button class="btn btn-destructive" onclick="closeModal('delete-modal');toast('Account deleted','error')">Delete account</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Transcript Modal -->
+<div class="modal-bg" id="edit-transcript-modal">
+  <div class="modal-box" style="max-width:600px;">
+    <div class="modal-header-row">
+      <div class="modal-title">Edit Transcript</div>
+      <button class="modal-close-btn" onclick="closeModal('edit-transcript-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="margin-bottom:12px;font-size:13px;color:var(--gray-500);">Select a segment to edit, then save your changes.</p>
+      <div style="display:flex;flex-direction:column;gap:10px;max-height:340px;overflow-y:auto;padding-right:4px;">
+        <div style="border:1px solid var(--gray-200);border-radius:8px;overflow:hidden;">
+          <div style="background:var(--gray-50);padding:8px 12px;font-size:12px;font-weight:600;color:var(--gray-500);display:flex;justify-content:space-between;">
+            <span>Sarah Chen · 00:00</span>
+          </div>
+          <textarea class="form-input" style="border:none;border-radius:0;resize:vertical;min-height:64px;font-size:13px;line-height:1.6;">Good morning everyone. Thanks for joining today's Q4 strategy meeting. I'd like to start by reviewing our objectives for the quarter.</textarea>
+        </div>
+        <div style="border:1px solid var(--gray-200);border-radius:8px;overflow:hidden;">
+          <div style="background:var(--gray-50);padding:8px 12px;font-size:12px;font-weight:600;color:var(--gray-500);">Michael Torres · 00:15</div>
+          <textarea class="form-input" style="border:none;border-radius:0;resize:vertical;min-height:64px;font-size:13px;line-height:1.6;">Thanks Sarah. I've prepared a presentation on our Q3 performance metrics that I think will provide good context for our Q4 planning.</textarea>
+        </div>
+        <div style="border:1px solid var(--gray-200);border-radius:8px;overflow:hidden;">
+          <div style="background:var(--gray-50);padding:8px 12px;font-size:12px;font-weight:600;color:var(--gray-500);">Sarah Chen · 00:28</div>
+          <textarea class="form-input" style="border:none;border-radius:0;resize:vertical;min-height:48px;font-size:13px;line-height:1.6;">Perfect. Let's dive in. What were our key wins from last quarter?</textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('edit-transcript-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="closeModal('edit-transcript-modal');toast('Transcript saved','success')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Save changes
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Notes Modal -->
+<div class="modal-bg" id="edit-notes-modal">
+  <div class="modal-box" style="max-width:560px;">
+    <div class="modal-header-row">
+      <div class="modal-title">Edit Meeting Notes</div>
+      <button class="modal-close-btn" onclick="closeModal('edit-notes-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="margin-bottom:14px;font-size:13px;color:var(--gray-500);">Edit any section of the AI-generated notes below.</p>
+      <div style="display:flex;flex-direction:column;gap:14px;max-height:380px;overflow-y:auto;padding-right:4px;">
+        <div class="form-group">
+          <label class="form-label">Summary</label>
+          <textarea class="form-input" style="resize:vertical;min-height:80px;font-size:13px;line-height:1.6;">This Q4 strategy meeting focused on reviewing Q3 performance and planning for the upcoming quarter. The team exceeded revenue targets by 15% and saw a 22% increase in customer acquisition.</textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Key Points <span style="font-size:11px;color:var(--gray-400);font-weight:400;">(one per line)</span></label>
+          <textarea class="form-input" style="resize:vertical;min-height:100px;font-size:13px;line-height:1.8;">Q3 revenue exceeded targets by 15%
+Customer acquisition increased by 22%
+Retention rate improved to 94%
+Mobile app scheduled for mid-November release</textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Action Items <span style="font-size:11px;color:var(--gray-400);font-weight:400;">(one per line)</span></label>
+          <textarea class="form-input" style="resize:vertical;min-height:100px;font-size:13px;line-height:1.8;">Follow up with Fortune 500 leads — David Kim — May 25
+Complete mobile app beta — Emily Rodriguez — Jun 1
+Finalise support hiring — Michael Torres — May 30</textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('edit-notes-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="closeModal('edit-notes-modal');toast('Notes saved','success')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Save changes
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<!-- ═══════════════ SCRIPTS ═══════════════ -->
+<script>
+// ---- Nav ----
+function goPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+// ---- Toast ----
+function toast(msg, type='info') {
+  const icons = {success:'✓', error:'✕', info:'ℹ'};
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `<span>${icons[type]}</span> ${msg}`;
+  document.getElementById('toast-wrap').appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+// ---- Modal ----
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-bg').forEach(bg => {
+  bg.addEventListener('click', e => { if(e.target===bg) bg.classList.remove('open'); });
+});
+
+// ---- OTP ----
+function otpFwd(inp, idx) {
+  if(inp.value.length===1){
+    const cells = document.querySelectorAll('.otp-cell');
+    if(idx < cells.length-1) cells[idx+1].focus();
+  }
+}
+function otpBwd(e, inp, idx) {
+  if(e.key==='Backspace' && !inp.value && idx>0)
+    document.querySelectorAll('.otp-cell')[idx-1].focus();
+}
+
+// ---- Settings toggles ----
+function swToggle(el) {
+  el.classList.toggle('off');
+  toast(el.classList.contains('off') ? 'Setting disabled' : 'Setting enabled', 'info');
+}
+
+// ---- Tabs ----
+function switchTab(btn, panelId) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(panelId).classList.add('active');
+}
+
+// ---- Recording ----
+let recInterval, recSecs=0, recType='audio';
+let mediaRecorder, recChunks=[], recStream;
+
+async function startRec(type) {
+  recType = type;
+  document.getElementById('record-idle').style.display = 'none';
+  document.getElementById('record-live').style.display = 'flex';
+  document.getElementById('rec-type-label').textContent = `Recording ${type==='video'?'Video':'Audio'}...`;
+  recSecs = 0;
+  recInterval = setInterval(() => {
+    recSecs++;
+    const m = String(Math.floor(recSecs/60)).padStart(2,'0');
+    const s = String(recSecs%60).padStart(2,'0');
+    document.getElementById('rec-timer').textContent = `${m}:${s}`;
+  }, 1000);
+
+  try {
+    recStream = await navigator.mediaDevices.getUserMedia(type==='video'?{video:true,audio:true}:{audio:true});
+    mediaRecorder = new MediaRecorder(recStream);
+    recChunks = [];
+    mediaRecorder.ondataavailable = e => { if(e.data.size>0) recChunks.push(e.data); };
+    mediaRecorder.onstop = finishRec;
+    mediaRecorder.start();
+  } catch(err) {
+    // demo mode — no mic access
+  }
+}
+
+function stopRec() {
+  clearInterval(recInterval);
+  if(mediaRecorder && mediaRecorder.state!=='inactive') {
+    mediaRecorder.stop();
+    recStream?.getTracks().forEach(t=>t.stop());
+  } else {
+    finishRec();
+  }
+  document.getElementById('record-idle').style.display = 'flex';
+  document.getElementById('record-live').style.display = 'none';
+}
+
+function finishRec() {
+  const dur = `${String(Math.floor(recSecs/60)).padStart(2,'0')}:${String(recSecs%60).padStart(2,'0')}`;
+  const name = `Recording_${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.webm`;
+  addFileRow({id: String(Date.now()), name, type: recType, duration: dur, date: 'Today', status: 'processing'});
+  toast('Recording saved — processing started', 'success');
+}
+
+// ---- File upload ----
+let pendingFiles = [];
+
+function triggerFileInput() { document.getElementById('file-input').click(); }
+
+function dzOver(e) { e.preventDefault(); document.getElementById('drop-zone').classList.add('over'); }
+function dzLeave() { document.getElementById('drop-zone').classList.remove('over'); }
+function dzDrop(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('over');
+  const files = Array.from(e.dataTransfer.files);
+  if(files.length) showConsent(files);
+}
+
+function handleFiles(files) {
+  if(files.length) showConsent(Array.from(files));
+}
+
+function showConsent(files) {
+  pendingFiles = files;
+  document.getElementById('consent-section').style.display = 'block';
+  document.getElementById('consent-cb').checked = false;
+  document.getElementById('process-btn').disabled = true;
+  document.getElementById('consent-section').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function updateConsentBtn() {
+  document.getElementById('process-btn').disabled = !document.getElementById('consent-cb').checked;
+}
+
+function cancelUpload() {
+  pendingFiles = [];
+  document.getElementById('consent-section').style.display = 'none';
+  document.getElementById('upload-progress').style.display = 'none';
+}
+
+function startProcessing() {
+  document.getElementById('consent-section').style.display = 'none';
+  const progressEl = document.getElementById('upload-progress');
+  progressEl.style.display = 'block';
+  let pct = 0;
+  const iv = setInterval(() => {
+    pct += 8;
+    document.getElementById('prog-bar').style.width = pct+'%';
+    document.getElementById('prog-pct').textContent = pct+'%';
+    if(pct >= 100) {
+      clearInterval(iv);
+      progressEl.style.display = 'none';
+      const f = pendingFiles[0];
+      const isVideo = f.type.includes('video');
+      const isText = f.type.includes('text') || /\.(txt|docx|pdf|srt|vtt)$/i.test(f.name);
+      addFileRow({
+        id: String(Date.now()),
+        name: f.name,
+        type: isVideo ? 'video' : isText ? 'transcript' : 'audio',
+        duration: isText ? 'N/A' : 'Unknown',
+        date: 'Today',
+        status: isText ? 'completed' : 'processing'
+      });
+      pendingFiles = [];
+      toast('Upload complete — processing started', 'success');
+    }
+  }, 180);
+}
+
+// ---- File list ----
+const files = [
+  {id:'1', name:'Q4 Strategy Meeting.mp4',     type:'video',      duration:'45:32', date:'May 18, 2026', status:'completed'},
+  {id:'2', name:'Client Onboarding Call.mp3',  type:'audio',      duration:'28:15', date:'May 17, 2026', status:'completed'},
+  {id:'3', name:'Team Standup.m4a',            type:'audio',      duration:'15:42', date:'May 16, 2026', status:'processing'},
+  {id:'4', name:'Board Meeting Transcript.txt',type:'transcript',  duration:'N/A',  date:'May 15, 2026', status:'completed'},
+];
+
+const fileIcons = {
+  audio: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>`,
+  video: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>`,
+  transcript: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>`
+};
+
+function addFileRow(rec) {
+  files.unshift(rec);
+  renderFiles();
+}
+
+function renderFiles() {
+  const list = document.getElementById('files-list');
+  list.innerHTML = files.map(r => `
+    <div class="file-row">
+      <div class="file-icon-wrap">${fileIcons[r.type]}</div>
+      <div class="file-meta">
+        <div class="file-name">${r.name}</div>
+        <div class="file-details">
+          ${r.duration!=='N/A' ? `<span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>${r.duration}</span>` : ''}
+          <span>${r.date}</span>
+          <span class="badge ${r.status==='completed'?'badge-default':'badge-secondary'}">${r.status}</span>
+          ${r.type==='transcript'?'<span class="badge badge-outline">Transcript</span>':''}
+        </div>
+      </div>
+      <div class="file-actions">
+        <button class="btn btn-outline btn-sm" ${r.status==='processing'?'disabled':''} onclick="goPage('pg-transcript')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          View Transcript
+        </button>
+        <button class="btn btn-primary btn-sm" ${r.status==='processing'?'disabled':''} onclick="goPage('pg-notes')">
+          View Notes
+        </button>
+      </div>
+    </div>
+  `).join('');
+}
+renderFiles();
+
+// ---- Transcript ----
+const piiOn = { on: true };
+const segments = [
+  {id:'1', speaker:'Sarah Chen',    ts:'00:00', text:'Good morning everyone. Thanks for joining today\'s Q4 strategy meeting. I\'d like to start by reviewing our objectives for the quarter.'},
+  {id:'2', speaker:'Michael Torres',ts:'00:15', text:'Thanks Sarah. I\'ve prepared a presentation on our Q3 performance metrics that I think will provide good context for our Q4 planning.'},
+  {id:'3', speaker:'Sarah Chen',    ts:'00:28', text:'Perfect. Let\'s dive in. What were our key wins from last quarter?'},
+  {id:'4', speaker:'Michael Torres',ts:'00:35', text:'We exceeded our revenue targets by 15%, which was fantastic. Customer acquisition was up 22% compared to Q2, and our retention rate improved to 94%.'},
+  {id:'5', speaker:'Emily Rodriguez',ts:'01:02',text:'Those are impressive numbers. I\'d like to add that our product team shipped all planned features on time, which contributed significantly to that retention improvement.'},
+  {id:'6', speaker:'Sarah Chen',    ts:'01:18', text:'Excellent work, team. Now, looking ahead to Q4, we need to focus on three main priorities: expanding our enterprise client base, launching the new mobile app, and improving our customer support response times.'},
+  {id:'7', speaker:'David Kim',     ts:'01:45', text:'On the enterprise front, we have five warm leads in the pipeline. Two of them are Fortune 500 companies — contact <pii>john.doe@acme.com</pii> and <pii>+1 555 876 5432</pii> — that could significantly impact our annual revenue.'},
+  {id:'8', speaker:'Emily Rodriguez',ts:'02:10',text:'The mobile app is on track for a mid-November release. We\'re in beta testing with about 200 users and the feedback from <pii>beta-users@company.io</pii> has been overwhelmingly positive.'},
+  {id:'9', speaker:'Sarah Chen',    ts:'02:35', text:'That\'s great to hear. What about support response times? I know we\'ve had some challenges there.'},
+  {id:'10',speaker:'Michael Torres',ts:'02:48', text:'We\'re hiring two additional support specialists, and we\'re implementing an AI-powered ticket triage system that should reduce response times by 40%.'},
+];
+
+const speakerColors = {};
+const colorPalette = ['#4F46E5','#7C3AED','#059669','#D97706','#DC2626','#0891B2'];
+let colorIdx=0;
+function spColor(name) {
+  if(!speakerColors[name]) speakerColors[name]=colorPalette[colorIdx++%colorPalette.length];
+  return speakerColors[name];
+}
+
+function renderTranscript(filter='') {
+  const filtered = segments.filter(s =>
+    s.text.toLowerCase().includes(filter.toLowerCase()) ||
+    s.speaker.toLowerCase().includes(filter.toLowerCase())
+  );
+  document.getElementById('seg-count').textContent = `${filtered.length} segments`;
+
+  const content = document.getElementById('transcript-content');
+  if(filtered.length===0) {
+    content.innerHTML = `<div style="text-align:center;padding:48px;color:var(--gray-400);"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 12px;display:block;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><p>No results for "${filter}"</p></div>`;
+    return;
+  }
+
+  content.innerHTML = filtered.map(s => {
+    const col = spColor(s.speaker);
+    let txt = s.text;
+    if(piiOn.on) {
+      txt = txt.replace(/<pii>(.*?)<\/pii>/g, '<span class="masked-span" title="PII masked">████████</span>');
+    } else {
+      txt = txt.replace(/<pii>(.*?)<\/pii>/g, '$1');
+    }
+    return `<div class="segment">
+      <div class="seg-time">${s.ts}</div>
+      <div class="seg-body">
+        <div class="seg-speaker"><span class="badge badge-outline" style="border-color:${col};color:${col};">${s.speaker}</span></div>
+        <div class="seg-text">${txt}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function filterTranscript(v) { renderTranscript(v); }
+
+function togglePII() {
+  piiOn.on = !piiOn.on;
+  const pill = document.getElementById('pii-toggle');
+  pill.classList.toggle('off', !piiOn.on);
+  renderTranscript(document.getElementById('transcript-search').value);
+  toast(piiOn.on ? 'PII masking on' : 'PII masking off', 'info');
+}
+
+renderTranscript();
+
+// ---- Copy notes ----
+function copyNotes() {
+  const text = `Meeting Notes: Q4 Strategy Meeting.mp4\nDate: May 18, 2026\n\nSUMMARY\nThis Q4 strategy meeting focused on reviewing Q3 performance...\n\nACTION ITEMS\n• Follow up with Fortune 500 leads (David Kim)\n• Complete mobile app beta (Emily Rodriguez)\n• Hire support specialists (Michael Torres)`;
+  navigator.clipboard.writeText(text).catch(()=>{});
+  const btn = document.getElementById('copy-btn');
+  btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Copied`;
+  setTimeout(() => {
+    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy All`;
+  }, 2000);
+  toast('Notes copied to clipboard', 'success');
+}
+</script>
+</body>
 </html>
