@@ -1,13 +1,21 @@
-
-.app-layout {
+.app-shell {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  background: var(--color-bg);
 }
 
-/* Content area */
-.main-content {
+/* Centered content column, matching the width used by every page's cards. */
+.page-container {
   flex: 1;
-  padding: 30px;
-  background: #f5f5f5;
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 32px 24px;
+}
+
+@media (max-width: 640px) {
+  .page-container {
+    padding: 20px 16px;
+  }
 }

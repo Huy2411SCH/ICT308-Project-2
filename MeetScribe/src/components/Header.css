@@ -1,120 +1,126 @@
-/* Header bar */
-.header {
+/* Sticky top bar: brand on the left, account menu on the right. */
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 15px 30px;
-  background: white;
-  border-bottom: 1px solid #ddd;
+  justify-content: space-between;
+  padding: 14px 24px;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
 }
 
-/* Logo */
-.logo {
-  font-size: 20px;
-  font-weight: bold;
-  color: #333;
-  text-decoration: none;
+.brand {
   display: flex;
   align-items: center;
   gap: 10px;
-}
-
-.logo:hover {
   text-decoration: none;
 }
 
-.logo-icon {
-  font-size: 24px;
-}
-
-/* Right side */
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-}
-
-/* User email */
-.user-email {
-  font-size: 14px;
-  color: #666;
-}
-
-/* Avatar button */
-.avatar-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  border: 2px solid #0066cc;
-  background: white;
-  color: #0066cc;
-  font-weight: bold;
-  font-size: 14px;
-  cursor: pointer;
+.brand-icon {
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary);
+  color: #fff;
 }
 
-.avatar-btn:hover {
-  background: #0066cc;
-  color: white;
+.brand-icon svg {
+  width: 20px;
+  height: 20px;
 }
 
-/* Dropdown menu */
-.user-menu {
+.brand-name {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+/* ---- Account menu ---- */
+.account-menu {
   position: relative;
+}
+
+.account-trigger {
   display: flex;
   align-items: center;
   gap: 10px;
+  padding: 6px 10px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  cursor: pointer;
 }
 
-.dropdown-menu {
+.account-trigger:hover {
+  background: var(--color-border-light);
+}
+
+.account-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--color-primary-light-2);
+  color: var(--color-primary);
+  font-size: 13px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.account-email {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.account-chevron {
+  width: 16px;
+  height: 16px;
+  color: var(--color-text-faint);
+}
+
+.account-dropdown {
   position: absolute;
-  top: 45px;
+  top: calc(100% + 8px);
   right: 0;
-  background: white;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  min-width: 140px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  z-index: 1000;
+  min-width: 180px;
+  padding: 6px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
 }
 
 .dropdown-item {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   width: 100%;
-  padding: 10px 15px;
-  background: none;
+  padding: 9px 10px;
   border: none;
-  text-align: left;
-  cursor: pointer;
+  border-radius: var(--radius-sm);
+  background: none;
   font-size: 14px;
-  color: #333;
+  color: var(--color-text-secondary);
   text-decoration: none;
+  cursor: pointer;
+}
+
+.dropdown-item svg {
+  width: 16px;
+  height: 16px;
 }
 
 .dropdown-item:hover {
-  background: #f0f0f0;
+  background: var(--color-border-light);
 }
 
-.dropdown-item.logout {
-  color: #dc3545;
-  border-top: 1px solid #eee;
-}
-
-/* Login button in header */
-.login-btn {
-  padding: 8px 20px;
-  background: #0066cc;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  font-size: 14px;
-  text-decoration: none;
-}
-
-.login-btn:hover {
-  background: #0052a3;
-  text-decoration: none;
+.dropdown-item-danger {
+  color: var(--color-danger);
 }
