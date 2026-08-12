@@ -117,3 +117,20 @@ export function ChevronDownIcon(props) {
     </svg>
   )
 }
+
+export function SparklesIcon(props) {
+  return (
+    <svg {...defaultProps} {...props}>
+      <path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.1 2.1M15.6 15.6l2.1 2.1M17.7 6.3l-2.1 2.1M8.4 15.6l-2.1 2.1" />
+    </svg>
+  )
+}
+
+export function ShieldIcon(props) {
+  return (
+    <svg {...defaultProps} {...props}>
+      <path d="M12 3l7 3v6c0 4.5-2.9 7.9-7 9-4.1-1.1-7-4.5-7-9V6z" />
+      <path d="M9.5 12l1.8 1.8L15 10" />
+    </svg>
+  )
+}

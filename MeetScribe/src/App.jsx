@@ -7,6 +7,7 @@ import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
 
 // Import pages (we'll create these)
+import Home from './pages/Home'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 
@@ -81,12 +82,12 @@ function App() {
           />
         </Route>
 
-        {/* Redirect root to dashboard or login */}
-        <Route 
-          path="/" 
+        {/* Landing page for visitors; signed-in users skip straight to the dashboard */}
+        <Route
+          path="/"
           element={
-            user ? <Navigate to="/dashboard" /> : <Navigate to="/login" />
-          } 
+            user ? <Navigate to="/dashboard" /> : <Home />
+          }
         />
 
         {/* 404 Not Found */}
