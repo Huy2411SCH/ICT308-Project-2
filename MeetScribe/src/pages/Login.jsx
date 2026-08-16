@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import './Login.css'
-
+import { supabase } from '../lib/supabaseClient'
 export default function Login({ onLogin }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -9,44 +9,23 @@ export default function Login({ onLogin }) {
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
+const handleSubmit = async (e) => {
+  e.preventDefault()
+  setError('')
+  setLoading(true)
 
-    try {
-      // Simulate API call - replace with your actual API
-      const response = await mockLogin(email, password)
-      
-      // Save user data
-      onLogin(response.user)
-      navigate('/dashboard')
-    } catch (err) {
-      setError(err.message || 'Login failed')
-    } finally {
-      setLoading(false)
-    }
-  }
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) throw error
 
-  // Mock login - replace with real API
-  const mockLogin = (email, password) => {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        if (email && password.length >= 6) {
-          resolve({
-            user: {
-              id: '1',
-              email: email,
-              name: 'John Doe',
-              token: 'mock-token-123'
-            }
-          })
-        } else {
-          reject(new Error('Invalid credentials'))
-        }
-      }, 1000)
-    })
+    onLogin(data.user)
+    navigate('/dashboard')
+  } catch (err) {
+    setError(err.message || 'Login failed')
+  } finally {
+    setLoading(false)
   }
+}
 
   return (
     <div className="login-page">
