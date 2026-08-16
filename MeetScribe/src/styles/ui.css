@@ -1,11 +1,6 @@
-/*
- * Small shared UI primitives (buttons, cards, badges) used across pages.
- * Centralizing these means a single tweak here restyles every button/card
- * in the app consistently — add new variants here rather than one-off
- * styles in a page's CSS file.
- */
+/* Shared UI primitives */
 
-/* ---- Buttons ---- */
+/* Buttons */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -74,7 +69,7 @@
   font-size: 13px;
 }
 
-/* ---- Cards ---- */
+/* Cards */
 .card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -102,7 +97,7 @@
   padding: 20px 24px;
 }
 
-/* ---- Badges ---- */
+/* Badges */
 .badge {
   display: inline-flex;
   align-items: center;

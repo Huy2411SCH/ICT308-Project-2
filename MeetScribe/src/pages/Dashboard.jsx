@@ -11,8 +11,7 @@ import {
 } from '../components/icons'
 import './Dashboard.css'
 
-// Placeholder rows until the "list my files" endpoint exists.
-// Replace with data fetched from the backend once it's available.
+// Placeholder file rows
 const MOCK_FILES = [
   { id: 1, name: 'Q4 Strategy Meeting.mp4', duration: '45:32', date: 'May 18, 2026', status: 'ready' },
   { id: 2, name: 'Client Onboarding Call.mp3', duration: '22:10', date: 'May 12, 2026', status: 'processing' },
@@ -39,11 +38,7 @@ export default function Dashboard({ user }) {
   )
 }
 
-// ---------------------------------------------------------------------------
-// Record a meeting directly in the browser (mic or camera).
-// Currently just drives the UI state; wiring this to MediaRecorder /
-// getUserMedia is a follow-up task once the recording pipeline lands.
-// ---------------------------------------------------------------------------
+// Record meeting UI
 function RecordMeetingCard() {
   const [recordingMode, setRecordingMode] = useState(null) // null | 'audio' | 'video'
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
@@ -99,11 +94,7 @@ function RecordMeetingCard() {
   )
 }
 
-// ---------------------------------------------------------------------------
-// Upload an existing recording or transcript file. Files are only held in
-// local state for now — actually sending them to the transcription API is
-// out of scope until the backend integration stage.
-// ---------------------------------------------------------------------------
+// Upload files UI
 function UploadFilesCard() {
   const fileInputRef = useRef(null)
   const [isDragOver, setIsDragOver] = useState(false)
@@ -130,8 +121,7 @@ function UploadFilesCard() {
   }
 
   const processFile = () => {
-    // TODO: POST `pendingFile` to the transcription endpoint and add the
-    // resulting entry to the files list once the backend exists.
+    // TODO: send file to backend
     cancelUpload()
   }
 
@@ -204,9 +194,7 @@ function UploadFilesCard() {
   )
 }
 
-// ---------------------------------------------------------------------------
-// Read-only list of previously recorded/uploaded files.
-// ---------------------------------------------------------------------------
+// Files list UI
 function FilesList({ files }) {
   return (
     <section>

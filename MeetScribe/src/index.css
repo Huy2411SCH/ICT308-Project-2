@@ -5,12 +5,7 @@
   box-sizing: border-box;
 }
 
-/*
- * Shared design tokens.
- * Every component's CSS should read colors/spacing from these variables
- * instead of hard-coding hex values, so the palette can be re-themed
- * from one place as the product design evolves.
- */
+/* Shared design tokens */
 :root {
   /* Brand */
   --color-primary: #4f46e5;
@@ -68,8 +63,7 @@ button {
   font-family: inherit;
 }
 
-/* Utility: hide an element visually while keeping it in the DOM/tab order,
-   e.g. the native <input type="file"> behind a styled drop-zone. */
+/* Visually hidden but still focusable */
 .visually-hidden {
   position: absolute;
   width: 1px;

@@ -18,7 +18,7 @@
   margin-bottom: 16px;
 }
 
-/* ---- Record Meeting card ---- */
+/* Record meeting card */
 .recording-idle {
   display: flex;
   justify-content: center;
@@ -64,7 +64,7 @@
   color: var(--color-text-primary);
 }
 
-/* ---- Upload Files card ---- */
+/* Upload files card */
 .drop-zone {
   padding: 48px 24px;
   text-align: center;
@@ -136,7 +136,7 @@
   margin-top: 12px;
 }
 
-/* ---- Files list ---- */
+/* Files list */
 .file-list {
   padding: 0;
   overflow: hidden;

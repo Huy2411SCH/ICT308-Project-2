@@ -1,4 +1,4 @@
-/* Sticky top bar: brand on the left, account menu on the right. */
+/* Top bar */
 .app-header {
   position: sticky;
   top: 0;
@@ -40,7 +40,7 @@
   color: var(--color-text-primary);
 }
 
-/* ---- Account menu ---- */
+/* Account menu */
 .account-menu {
   position: relative;
 }

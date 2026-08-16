@@ -5,7 +5,7 @@
   background: var(--color-bg);
 }
 
-/* Centered content column, matching the width used by every page's cards. */
+/* Centered content column */
 .page-container {
   flex: 1;
   width: 100%;

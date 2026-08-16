@@ -1,10 +1,4 @@
-/*
- * Small, dependency-free icon set used across the app.
- * Keeping these as plain inline SVG (rather than pulling in an icon
- * library) keeps the bundle light and every icon trivially editable.
- * Each icon accepts the usual SVG props (className, style, etc.) so
- * callers control size/color via CSS.
- */
+
 
 const defaultProps = {
   viewBox: '0 0 24 24',

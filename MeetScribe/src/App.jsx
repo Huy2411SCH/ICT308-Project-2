@@ -6,7 +6,7 @@ import './App.css'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
 
-// Import pages (we'll create these)
+// Import pages
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 
