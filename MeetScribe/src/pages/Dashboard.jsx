@@ -196,45 +196,36 @@ function UploadFilesCard() {
 
 // Files list UI
 function FilesList({ files }) {
+  const [activeTab, setActiveTab] = useState('video')
+
+  const filtered = files.filter((file) => file.type === activeTab)
+
   return (
     <section>
       <h2 className="section-title">Your Files</h2>
+      <div className="file-tabs">
+        <button
+          className={`file-tab${activeTab === 'video' ? ' file-tab-active' : ''}`}
+          onClick={() => setActiveTab('video')}
+        >
+          Videos
+        </button>
+        <button
+          className={`file-tab${activeTab === 'audio' ? ' file-tab-active' : ''}`}
+          onClick={() => setActiveTab('audio')}
+        >
+          Audio
+        </button>
+        <button
+          className={`file-tab${activeTab === 'transcript' ? ' file-tab-active' : ''}`}
+          onClick={() => setActiveTab('transcript')}
+        >
+          Transcripts
+        </button>
+      </div>
 
-      {files.length === 0 ? (
-        <div className="card file-list-empty">No files yet — record or upload a meeting to get started.</div>
-      ) : (
-        <div className="card file-list">
-          {files.map((file) => (
-            <div className="file-row" key={file.id}>
-              <span className="file-icon">
-                <FileTextIcon />
-              </span>
 
-              <div className="file-meta">
-                <div className="file-name">{file.name}</div>
-                <div className="file-details">
-                  {file.duration && (
-                    <span>
-                      <ClockIcon /> {file.duration}
-                    </span>
-                  )}
-                  <span>{file.date}</span>
-                  <span className={`badge badge-${file.status}`}>{file.status}</span>
-                </div>
-              </div>
-
-              <div className="file-actions">
-                <button className="btn btn-ghost btn-sm" title="Download">
-                  <DownloadIcon />
-                </button>
-                <button className="btn btn-ghost btn-sm" title="Delete">
-                  <TrashIcon />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      {/* render `filtered` instead of `files` below */}
     </section>
   )
 }
