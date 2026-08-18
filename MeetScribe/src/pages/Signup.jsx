@@ -1,39 +1,58 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import './Login.css'
-import { supabase } from '../lib/supabaseClient'
-export default function Login() {
+import { authService } from '../lib/authService'
+
+export default function SignUp() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
   const navigate = useNavigate()
 
-const handleSubmit = async (e) => {
-  e.preventDefault()
-  setError('')
-  setLoading(true)
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
 
-  try {
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) throw error
-
-    navigate('/dashboard')
-  } catch (err) {
-    setError(err.message || 'Login failed')
-  } finally {
-    setLoading(false)
+    try {
+      const { session } = await authService.signUp(email, password)
+      if (session) {
+        // Email confirmation is disabled — user is signed in immediately.
+        navigate('/dashboard')
+      } else {
+        // Confirmation email sent — nothing to navigate to yet.
+        setSubmitted(true)
+      }
+    } catch (err) {
+      setError(err.message || 'Sign up failed')
+    } finally {
+      setLoading(false)
+    }
   }
-}
+
+  if (submitted) {
+    return (
+      <div className="login-page">
+        <div className="login-container">
+          <div className="login-header">
+            <h1>Check your email</h1>
+            <p>We sent a confirmation link to {email}.</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="login-page">
       <div className="login-container">
         <div className="login-header">
           <h1>MeetScribe</h1>
-          <p>AI Transcript & Meeting Notes Generator</p>
+          <p>Create your account</p>
         </div>
-        
+
         <form onSubmit={handleSubmit} className="login-form">
           <div className="form-group">
             <label>Email Address</label>
@@ -52,19 +71,20 @@ const handleSubmit = async (e) => {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter your password"
+              placeholder="Create a password"
               required
+              minLength={6}
             />
           </div>
 
           {error && <div className="login-error">{error}</div>}
 
           <button type="submit" className="login-btn" disabled={loading}>
-            {loading ? 'Logging in...' : 'Login'}
+            {loading ? 'Signing up...' : 'Sign Up'}
           </button>
-
         </form>
-        <p>Don't have an account? <Link to="/signup">Sign up</Link></p>
+
+        <p>Already have an account? <Link to="/login">Log in</Link></p>
       </div>
     </div>
   )

@@ -10,7 +10,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 // Import pages
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
-
+import Signup from './pages/Signup'
 function App() {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -59,7 +59,12 @@ function App() {
             session ? <Navigate to="/dashboard" /> : <Login />
           }
         />
-
+        <Route
+          path="/signup"
+          element={
+            session ? <Navigate to="/dashboard" /> : <Signup />
+          }
+        />
         {/* Protected Routes - With Layout */}
         <Route
           element={<Layout session={session} onLogout={handleLogout} />}

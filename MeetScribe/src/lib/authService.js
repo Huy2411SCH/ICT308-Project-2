@@ -14,4 +14,13 @@ export const authService = {
     const { error } = await supabase.auth.signOut()
     if (error) throw error
   },
+  async signInWithEmail(email) {
+    const { error } = await supabase.auth.signInWithOtp({ email })
+    if (error) throw error
+  },
+  async signUp(email, password) {
+    const { data, error } = await supabase.auth.signUp({ email, password })
+    if (error) throw error
+  return data
+  }
 }
