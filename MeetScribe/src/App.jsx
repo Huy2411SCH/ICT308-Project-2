@@ -11,6 +11,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Signup from './pages/Signup'
+import Homepage from './pages/Homepage' 
 function App() {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -53,6 +54,7 @@ function App() {
     <Router>
       <Routes>
         {/* Public Routes - No Layout */}
+        <Route path="/homepage" element={<Homepage />} />
         <Route
           path="/login"
           element={
