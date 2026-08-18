@@ -81,11 +81,11 @@ function App() {
           />
         </Route>
 
-        {/* Redirect root to dashboard or login */}
+        {/* Redirect root to dashboard or homepage */}
         <Route
           path="/"
           element={
-            session ? <Navigate to="/dashboard" /> : <Navigate to="/login" />
+            session ? <Navigate to="/dashboard" /> : <Navigate to="/homepage" />
           }
         />
 
