@@ -9,6 +9,7 @@ import {
   DownloadIcon,
   TrashIcon,
 } from '../components/icons'
+import { authService } from '../lib/authService'
 import './Dashboard.css'
 
 // Placeholder file rows
@@ -27,7 +28,7 @@ function formatElapsed(totalSeconds) {
 export default function Dashboard({ user }) {
   return (
     <div className="dashboard-page">
-      <h1 className="dashboard-title">Welcome back, {user?.name || 'there'}</h1>
+      <h1 className="dashboard-title">Welcome back, {user?.user_metadata?.name || user?.email || 'there'}</h1>
 
       <div className="dashboard-sections">
         <RecordMeetingCard />

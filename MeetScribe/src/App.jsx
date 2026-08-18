@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import './App.css'
+import { authService } from './lib/authService'
 
 // Import components
 import Layout from './components/Layout'
@@ -11,41 +12,33 @@ import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 
 function App() {
-  const [user, setUser] = useState(null)
+  const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  // Check if user is logged in
+  // Get current session, then listen for auth changes
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const token = localStorage.getItem('token')
-        const userData = localStorage.getItem('user')
-        
-        if (token && userData) {
-          setUser(JSON.parse(userData))
-        }
-      } catch (error) {
-        console.error('Auth check failed:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-    
-    checkAuth()
+    authService.getSession().then((session) => {
+      setSession(session)
+      setLoading(false)
+    }).catch((error) => {
+      console.error('Error getting session:', error)
+      setLoading(false)
+    })
+
+    const subscription = authService.onAuthStateChange((_event, session) => {
+      setSession(session)
+    })
+
+    return () => subscription.subscription.unsubscribe()
   }, [])
 
-  // Login handler
-  const handleLogin = (userData) => {
-    setUser(userData)
-    localStorage.setItem('token', userData.token)
-    localStorage.setItem('user', JSON.stringify(userData))
-  }
-
   // Logout handler
-  const handleLogout = () => {
-    setUser(null)
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
+  const handleLogout = async () => {
+    try {
+      await authService.signOut()
+    } catch (error) {
+      console.error('Error signing out:', error)
+    }
   }
 
   if (loading) {
@@ -60,33 +53,33 @@ function App() {
     <Router>
       <Routes>
         {/* Public Routes - No Layout */}
-        <Route 
-          path="/login" 
+        <Route
+          path="/login"
           element={
-            user ? <Navigate to="/dashboard" /> : <Login onLogin={handleLogin} />
-          } 
+            session ? <Navigate to="/dashboard" /> : <Login />
+          }
         />
 
         {/* Protected Routes - With Layout */}
-        <Route 
-          element={<Layout user={user} onLogout={handleLogout} />}
+        <Route
+          element={<Layout session={session} onLogout={handleLogout} />}
         >
-          <Route 
-            path="/dashboard" 
+          <Route
+            path="/dashboard"
             element={
-              <ProtectedRoute user={user}>
-                <Dashboard user={user} />
+              <ProtectedRoute session={session}>
+                <Dashboard user={session?.user} />
               </ProtectedRoute>
-            } 
+            }
           />
         </Route>
 
         {/* Redirect root to dashboard or login */}
-        <Route 
-          path="/" 
+        <Route
+          path="/"
           element={
-            user ? <Navigate to="/dashboard" /> : <Navigate to="/login" />
-          } 
+            session ? <Navigate to="/dashboard" /> : <Navigate to="/login" />
+          }
         />
 
         {/* 404 Not Found */}

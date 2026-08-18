@@ -2,18 +2,14 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { MicIcon, SettingsIcon, LogoutIcon, ChevronDownIcon } from './icons'
 import './Header.css'
-
+import { authService } from '../lib/authService'
 export default function Header({ user, onLogout }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const navigate = useNavigate()
 
-  const handleLogout = () => {
-    setIsMenuOpen(false)
-    onLogout()
-    navigate('/login')
-  }
 
-  const initial = user?.name ? user.name.charAt(0).toUpperCase() : 'U'
+  const displayName = user?.user_metadata?.name || user?.email
+  const initial = displayName ? displayName.charAt(0).toUpperCase() : 'U'
 
   return (
     <header className="app-header">
@@ -42,7 +38,7 @@ export default function Header({ user, onLogout }) {
               <Link to="/settings" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
                 <SettingsIcon /> Settings
               </Link>
-              <button className="dropdown-item dropdown-item-danger" onClick={handleLogout}>
+              <button className="dropdown-item dropdown-item-danger" onClick={() => authService.signOut()}>
                 <LogoutIcon /> Logout
               </button>
             </div>

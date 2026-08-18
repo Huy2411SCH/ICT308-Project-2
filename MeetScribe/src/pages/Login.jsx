@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import './Login.css'
 import { supabase } from '../lib/supabaseClient'
-export default function Login({ onLogin }) {
+export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -15,10 +15,9 @@ const handleSubmit = async (e) => {
   setLoading(true)
 
   try {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) throw error
 
-    onLogin(data.user)
     navigate('/dashboard')
   } catch (err) {
     setError(err.message || 'Login failed')
