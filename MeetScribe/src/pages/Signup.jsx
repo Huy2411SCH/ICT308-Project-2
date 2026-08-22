@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import './Login.css'
+import './Signup.css'
 import { authService } from '../lib/authService'
 
 export default function SignUp() {
+  const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -54,6 +55,17 @@ export default function SignUp() {
         </div>
 
         <form onSubmit={handleSubmit} className="login-form">
+          <div className="form-group">
+            <label>Username</label>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Enter your username"
+              required
+            />
+          </div>
+
           <div className="form-group">
             <label>Email Address</label>
             <input
