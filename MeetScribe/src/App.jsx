@@ -52,7 +52,7 @@ function App() {
   }
 
   return (
-    <Router>
+    <Router basename="/ICT308-Project-2">
       <Routes>
         {/* Public Routes - No Layout */}
         <Route path="/homepage" element={<Homepage />} />
@@ -112,7 +112,7 @@ function NotFound() {
       <h1>404</h1>
       <h2>Page Not Found</h2>
       <p>The page you're looking for doesn't exist.</p>
-      <a href="/" className="home-link">Go Home</a>
+      <a href="/ICT308-Project-2/" className="home-link">Go Home</a>
     </div>
   )
 }
