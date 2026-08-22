@@ -33,7 +33,7 @@ const handleSubmit = async (e) => {
           <h1>MeetScribe</h1>
           <p>AI Transcript & Meeting Notes Generator</p>
         </div>
-        
+
         <form onSubmit={handleSubmit} className="login-form">
           <div className="form-group">
             <label>Email Address</label>

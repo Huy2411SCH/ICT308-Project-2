@@ -11,6 +11,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Signup from './pages/Signup'
+import Homepage from './pages/Homepage' 
 import Files from './pages/Files'
 function App() {
   const [session, setSession] = useState(null)
@@ -54,6 +55,7 @@ function App() {
     <Router>
       <Routes>
         {/* Public Routes - No Layout */}
+        <Route path="/homepage" element={<Homepage />} />
         <Route
           path="/login"
           element={
@@ -88,11 +90,11 @@ function App() {
           />
         </Route>
 
-        {/* Redirect root to dashboard or login */}
+        {/* Redirect root to dashboard or homepage */}
         <Route
           path="/"
           element={
-            session ? <Navigate to="/dashboard" /> : <Navigate to="/login" />
+            session ? <Navigate to="/dashboard" /> : <Navigate to="/homepage" />
           }
         />
 
