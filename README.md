@@ -1,5 +1,17 @@
-# MeetWise
+# MeetScribe
 ICT308 Project 2 - AI-powered transcript web application 
+
+Website is live at: https://huy2411sch.github.io/ICT308-Project-2/
+
+
+
+
+
+
+
+
+
+
 
 #Initialization
 

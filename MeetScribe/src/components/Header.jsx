@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { MicIcon, SettingsIcon, LogoutIcon, ChevronDownIcon } from './icons'
+import { MicIcon, FileTextIcon, SettingsIcon, LogoutIcon, ChevronDownIcon } from './icons'
 import './Header.css'
 import { authService } from '../lib/authService'
 export default function Header({ user, onLogout }) {
@@ -35,6 +35,9 @@ export default function Header({ user, onLogout }) {
           {isMenuOpen && (
             // Clicking a link closes the menu so it doesn't stay open after navigating.
             <div className="account-dropdown">
+              <Link to="/files" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
+                <FileTextIcon /> My Files
+              </Link>
               <Link to="/settings" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
                 <SettingsIcon /> Settings
               </Link>
