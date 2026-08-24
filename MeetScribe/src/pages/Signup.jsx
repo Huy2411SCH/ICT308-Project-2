@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import './Login.css'
 import { authService } from '../lib/authService'
+import LoginHeader from '../components/LoginHeader'
 
 export default function SignUp() {
   const [email, setEmail] = useState('')
@@ -35,10 +36,13 @@ export default function SignUp() {
   if (submitted) {
     return (
       <div className="login-page">
-        <div className="login-container">
-          <div className="login-header">
-            <h1>Check your email</h1>
-            <p>We sent a confirmation link to {email}.</p>
+        <LoginHeader />
+        <div className="login-center">
+          <div className="login-container">
+            <div className="login-header">
+              <h1>Check your email</h1>
+              <p>We sent a confirmation link to {email}.</p>
+            </div>
           </div>
         </div>
       </div>
@@ -47,44 +51,47 @@ export default function SignUp() {
 
   return (
     <div className="login-page">
-      <div className="login-container">
-        <div className="login-header">
-          <h1>MeetScribe</h1>
-          <p>Create your account</p>
+      <LoginHeader />
+      <div className="login-center">
+        <div className="login-container">
+          <div className="login-header">
+            <h1>MeetScribe</h1>
+            <p>Create your account</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="login-form">
+            <div className="form-group">
+              <label>Email Address</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Password</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Create a password"
+                required
+                minLength={6}
+              />
+            </div>
+
+            {error && <div className="login-error">{error}</div>}
+
+            <button type="submit" className="login-btn" disabled={loading}>
+              {loading ? 'Signing up...' : 'Sign Up'}
+            </button>
+          </form>
+
+          <p>Already have an account? <Link to="/login">Log in</Link></p>
         </div>
-
-        <form onSubmit={handleSubmit} className="login-form">
-          <div className="form-group">
-            <label>Email Address</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label>Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Create a password"
-              required
-              minLength={6}
-            />
-          </div>
-
-          {error && <div className="login-error">{error}</div>}
-
-          <button type="submit" className="login-btn" disabled={loading}>
-            {loading ? 'Signing up...' : 'Sign Up'}
-          </button>
-        </form>
-
-        <p>Already have an account? <Link to="/login">Log in</Link></p>
       </div>
     </div>
   )
