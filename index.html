@@ -158,9 +158,37 @@
 
     /* ---- LOGIN ---- */
     .login-wrap {
-      flex: 1; display: flex; align-items: center; justify-content: center; padding: 24px;
+      flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) 380px;
+      align-items: center; gap: 56px; max-width: 1180px; width: 100%;
+      margin: 0 auto; padding: 48px 40px;
     }
     .login-card { width: 100%; max-width: 420px; }
+    .login-preview { color: var(--gray-900); }
+    .login-preview-heading { margin-bottom: 22px; }
+    .login-preview-heading h2 { font-size: 34px; line-height: 1.15; margin-bottom: 10px; }
+    .login-preview-heading p { max-width: 480px; font-size: 15px; color: var(--gray-600); line-height: 1.7; }
+    .preview-window { background: rgba(255,255,255,.82); border: 1px solid var(--gray-200); border-radius: 14px; padding: 18px; box-shadow: 0 18px 42px rgba(67,56,202,.12); transform: rotate(-1deg); }
+    .preview-toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    .preview-dots { display: flex; gap: 5px; }
+    .preview-dots span { width: 7px; height: 7px; border-radius: 50%; background: var(--gray-300); }
+    .preview-dots span:first-child { background: var(--red-500); }
+    .preview-dots span:nth-child(2) { background: #F59E0B; }
+    .preview-dots span:nth-child(3) { background: var(--green-600); }
+    .preview-label { font-size: 11px; font-weight: 700; color: var(--gray-400); letter-spacing: .08em; text-transform: uppercase; }
+    .preview-record { display: flex; align-items: center; gap: 10px; padding: 12px; margin-bottom: 12px; background: var(--indigo-50); border-radius: 9px; }
+    .preview-record-dot { width: 10px; height: 10px; flex-shrink: 0; background: var(--red-500); border-radius: 50%; animation: blink 1s infinite, pulse-ring 1.5s ease-out infinite; }
+    .preview-record strong { display: block; font-size: 13px; }
+    .preview-record span { display: block; margin-top: 2px; font-size: 11px; color: var(--gray-500); }
+    .preview-grid { display: grid; grid-template-columns: 1.2fr .8fr; gap: 12px; }
+    .preview-panel { border: 1px solid var(--gray-200); border-radius: 9px; padding: 14px; background: var(--white); }
+    .preview-panel h3 { font-size: 12px; margin-bottom: 10px; }
+    .preview-progress { height: 7px; margin: 14px 0 8px; background: var(--gray-100); border-radius: 99px; overflow: hidden; }
+    .preview-progress span { display: block; width: 72%; height: 100%; background: var(--indigo-500); border-radius: inherit; }
+    .preview-file { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--gray-100); font-size: 11px; color: var(--gray-600); }
+    .preview-file:last-child { border-bottom: 0; }
+    .preview-file-icon { width: 25px; height: 25px; display: grid; place-items: center; border-radius: 6px; background: var(--indigo-100); color: var(--indigo-600); font-size: 12px; font-weight: 700; }
+    .preview-stat { display: flex; justify-content: space-between; margin-top: 12px; font-size: 11px; color: var(--gray-500); }
+    .preview-stat strong { color: var(--gray-900); font-size: 15px; }
     .login-logo {
       display: flex; flex-direction: column; align-items: center; gap: 12px;
       padding: 28px 24px 0;
@@ -193,9 +221,19 @@
     .record-btns { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
     .recording-live {
       display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 32px;
+      background: linear-gradient(180deg, #FFF7F7 0%, var(--white) 100%);
+      border: 1px solid var(--red-100); border-radius: 10px;
     }
-    .rec-dot { width: 14px; height: 14px; background: var(--red-500); border-radius: 50%; animation: blink 1s infinite; }
+    .rec-dot {
+      width: 14px; height: 14px; background: var(--red-500); border-radius: 50%;
+      animation: blink 1s infinite, pulse-ring 1.5s ease-out infinite;
+    }
     @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+    @keyframes pulse-ring {
+      0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, .45); }
+      70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    }
     .rec-timer { font-size: 36px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--gray-900); }
 
     /* Upload zone */
@@ -454,6 +492,11 @@
       .main-wrap, .main-wrap-narrow { padding: 20px 16px; }
       .file-actions { flex-direction: column; }
       .stat-mini-grid { grid-template-columns: 1fr; }
+      .login-wrap { grid-template-columns: 1fr; gap: 24px; padding: 28px 16px; }
+      .login-preview { order: 2; }
+      .login-card { order: 1; }
+      .login-preview-heading h2 { font-size: 28px; }
+      .preview-window { transform: none; }
     }
   </style>
 </head>
@@ -468,7 +511,10 @@
       </div>
       <span class="brand-name">MeetWise</span>
     </div>
-    <button class="btn btn-primary" onclick="goPage('pg-login')">Sign in</button>
+    <div class="header-actions">
+      <button class="btn btn-primary" onclick="goPage('pg-login')">Sign in</button>
+      <button class="btn btn-primary" onclick="goPage('pg-login')">Sign up</button>
+    </div>
   </nav>
 
   <div class="landing-hero">
@@ -536,6 +582,35 @@
 <!-- ═══════════════ LOGIN ═══════════════ -->
 <div id="pg-login" class="page">
   <div class="login-wrap">
+    <div class="login-preview">
+      <div class="login-preview-heading">
+        <h2>Your meetings,<br/>already in motion.</h2>
+        <p>Capture the conversation, keep the important parts, and turn every discussion into clear next steps.</p>
+      </div>
+      <div class="preview-window">
+        <div class="preview-toolbar">
+          <div class="preview-dots"><span></span><span></span><span></span></div>
+          <span class="preview-label">MeetWise dashboard</span>
+        </div>
+        <div class="preview-record">
+          <div class="preview-record-dot"></div>
+          <div><strong>Recording meeting audio</strong><span>Live capture · 12:48</span></div>
+          <span class="badge badge-green" style="margin-left:auto;">Active</span>
+        </div>
+        <div class="preview-grid">
+          <div class="preview-panel">
+            <h3>Upload progress</h3>
+            <div class="preview-progress"><span></span></div>
+            <div class="preview-stat"><span>Q4 strategy meeting</span><strong>72%</strong></div>
+          </div>
+          <div class="preview-panel">
+            <h3>Recent files</h3>
+            <div class="preview-file"><div class="preview-file-icon">A</div><span>Client call.mp3</span></div>
+            <div class="preview-file"><div class="preview-file-icon">T</div><span>Team notes.txt</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
     <div class="card login-card">
       <div class="login-logo">
         <div class="brand-icon">
