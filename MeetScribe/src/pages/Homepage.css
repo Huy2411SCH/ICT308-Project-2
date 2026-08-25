@@ -5,7 +5,7 @@
 }
 
 /* Header */
-.homepage-header {
+.landing-nav {
   position: sticky;
   top: 0;
   z-index: 50;
@@ -17,10 +17,19 @@
   border-bottom: 1px solid var(--color-border);
 }
 
-.homepage-nav {
+.landing-nav .header-brand {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.landing-nav .brand-name {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.landing-nav > .btn {
+  flex-shrink: 0;
 }
 
 /* Hero */

@@ -27,25 +27,18 @@ export default function Homepage() {
 
   return (
     <div className="homepage">
-      <header className="homepage-header">
-        <Link to="/homepage" className="brand">
+      <nav className="landing-nav">
+        <Link to="/homepage" className="header-brand">
           <span className="brand-icon">
             <MicIcon />
           </span>
-          <span className="brand-name">MeetScribe</span>
+          <span className="brand-name">MeetWise</span>
         </Link>
 
-        <nav className="homepage-nav">
-          {isAuthed ? (
-            <Link to="/dashboard" className="btn btn-primary">Go to Dashboard</Link>
-          ) : (
-            <>
-              <Link to="/login" className="btn btn-ghost">Sign in</Link>
-              <Link to="/signup" className="btn btn-primary">Get Started</Link>
-            </>
-          )}
-        </nav>
-      </header>
+        <Link to={isAuthed ? '/dashboard' : '/login'} className="btn btn-primary">
+          {isAuthed ? 'Go to Dashboard' : 'Sign in'}
+        </Link>
+      </nav>
 
       <main>
         <section className="hero">
