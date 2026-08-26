@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import './Login.css'
 import { supabase } from '../lib/supabaseClient'
+import LoginHeader from '../components/LoginHeader'
 export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -28,6 +29,8 @@ const handleSubmit = async (e) => {
 
   return (
     <div className="login-page">
+      <LoginHeader />
+      <div className="login-center">
       <div className="login-wrap">
         <div className="login-preview">
           <div className="login-preview-heading">
@@ -100,6 +103,7 @@ const handleSubmit = async (e) => {
           </form>
           <p>Don't have an account? <Link to="/signup">Sign up</Link></p>
         </div>
+      </div>
       </div>
     </div>
   )
