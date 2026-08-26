@@ -2,10 +2,17 @@ import { supabase } from './supabaseClient'
 
 const BUCKET = 'media'
 
+const TRANSCRIPT_MIME_TYPES = [
+  'application/pdf',
+  'text/plain',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+]
+
 function inferFileType(file) {
   const mime = file.type || ''
   if (mime.startsWith('video/')) return 'video'
   if (mime.startsWith('audio/')) return 'audio'
+  if (TRANSCRIPT_MIME_TYPES.includes(mime)) return 'transcript'
   return 'transcript'
 }
 
