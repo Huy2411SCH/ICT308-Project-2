@@ -56,6 +56,10 @@
   background: var(--color-bg);
 }
 
+.file-row-clickable {
+  cursor: pointer;
+}
+
 .file-icon {
   display: flex;
   align-items: center;
