@@ -13,6 +13,7 @@ import Dashboard from './pages/Dashboard'
 import Signup from './pages/Signup'
 import Homepage from './pages/Homepage' 
 import Files from './pages/Files'
+import FileDetail from './pages/FileDetail'
 function App() {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -85,6 +86,14 @@ function App() {
             element={
               <ProtectedRoute session={session}>
                 <Files user={session?.user} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/files/:id"
+            element={
+              <ProtectedRoute session={session}>
+                <FileDetail />
               </ProtectedRoute>
             }
           />
