@@ -4,10 +4,6 @@ import {
   VideoIcon,
   StopIcon,
   UploadCloudIcon,
-  FileTextIcon,
-  ClockIcon,
-  DownloadIcon,
-  TrashIcon,
 } from '../components/icons'
 import FilePreview from '../components/FilePreview'
 import { uploadMediaForTranscription, fetchFiles, deleteFile, subscribeToFiles } from '../lib/transcription'
@@ -148,6 +144,7 @@ function UploadFilesCard({ user, onUploaded, onError }) {
   const cancelUpload = () => {
     setPendingFile(null)
     setConsentGiven(false)
+    setUploadError('')
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
@@ -233,6 +230,7 @@ function UploadFilesCard({ user, onUploaded, onError }) {
               />
               I confirm all participants have given consent.
             </label>
+            {uploadError && <p className="consent-warning">{uploadError}</p>}
             <div className="consent-actions">
               <button className="btn btn-primary" disabled={!consentGiven || processing} onClick={processFile}>
                 {processing ? 'Processing…' : 'Process File'}
@@ -277,7 +275,6 @@ function FilesList({ files, onDelete }) {
           Transcripts
         </button>
       </div>
-
 
       <div className="card file-list">
         {filtered.length === 0 ? (

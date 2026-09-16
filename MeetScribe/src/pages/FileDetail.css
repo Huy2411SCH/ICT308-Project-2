@@ -1,0 +1,147 @@
+.file-detail-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.back-link:hover {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.back-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.file-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 24px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  flex-wrap: wrap;
+}
+
+.file-icon-lg {
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
+}
+
+.file-icon-lg svg {
+  width: 28px;
+  height: 28px;
+}
+
+.file-detail-name {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin-bottom: 6px;
+}
+
+.file-detail-actions {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.file-detail-sections {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 860px) {
+  .file-detail-sections {
+    grid-template-columns: 1fr;
+  }
+}
+
+.processing-notice {
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  padding: 32px 24px;
+}
+
+.transcript-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-height: 480px;
+  overflow-y: auto;
+}
+
+.transcript-entry p {
+  font-size: 14px;
+  color: var(--color-text-primary);
+  line-height: 1.6;
+}
+
+.transcript-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.transcript-speaker {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.transcript-time {
+  font-size: 12px;
+  color: var(--color-text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.summary-overview {
+  font-size: 14px;
+  color: var(--color-text-primary);
+  line-height: 1.6;
+  margin-bottom: 18px;
+}
+
+.summary-subtitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  margin-bottom: 8px;
+}
+
+.summary-subtitle:not(:first-child) {
+  margin-top: 18px;
+}
+
+.summary-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-left: 20px;
+}
+
+.summary-list li {
+  font-size: 14px;
+  color: var(--color-text-primary);
+  line-height: 1.5;
+}

@@ -164,7 +164,9 @@ export default function Files({ user }) {
       </div>
 
       <section className="card file-list">
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="file-list-empty">Loading files&hellip;</div>
+        ) : filtered.length === 0 ? (
           <div className="file-list-empty">No files in this category yet.</div>
         ) : (
           filtered.map((file) => {
