@@ -5,10 +5,15 @@ import {
   StopIcon,
   UploadCloudIcon,
 } from '../components/icons'
-import FileRow from '../components/FileRow'
-import { filesService, normalizeDbFile } from '../lib/filesService'
-import { MOCK_FILES } from '../data/mockFiles'
+import FilePreview from '../components/FilePreview'
+import { uploadMediaForTranscription, fetchFiles, deleteFile, subscribeToFiles } from '../lib/transcription'
 import './Dashboard.css'
+
+function fileIconFor(type) {
+  if (type === 'video') return <VideoIcon />
+  if (type === 'audio') return <MicIcon />
+  return <FileTextIcon />
+}
 
 function formatElapsed(totalSeconds) {
   const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, '0')
@@ -16,30 +21,44 @@ function formatElapsed(totalSeconds) {
   return `${minutes}:${seconds}`
 }
 
-export default function Dashboard({ user }) {
-  const [files, setFiles] = useState(MOCK_FILES)
+function formatDate(isoString) {
+  return new Date(isoString).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+}
 
-  const refreshFiles = async () => {
-    try {
-      const realFiles = await filesService.listFiles()
-      setFiles([...realFiles.map(normalizeDbFile), ...MOCK_FILES])
-    } catch (err) {
-      console.error('Failed to load files:', err)
-    }
-  }
+export default function Dashboard({ user }) {
+  const [files, setFiles] = useState([])
+  const [error, setError] = useState(null)
 
   useEffect(() => {
-    refreshFiles()
-  }, [])
+    if (!user) return
+
+    const loadFiles = () => fetchFiles().then(setFiles).catch((err) => setError(err.message))
+    loadFiles()
+
+    return subscribeToFiles(user.id, loadFiles)
+  }, [user])
+
+  const handleFileUploaded = (fileRow) => setFiles((prev) => [fileRow, ...prev])
+
+  const handleDelete = async (file) => {
+    try {
+      await deleteFile(file.id)
+      setFiles((prev) => prev.filter((f) => f.id !== file.id))
+    } catch (err) {
+      setError(err.message)
+    }
+  }
 
   return (
     <div className="dashboard-page">
       <h1 className="dashboard-title">Welcome back, {user?.user_metadata?.name || user?.email || 'there'}</h1>
 
+      {error && <div className="file-list-error">{error}</div>}
+
       <div className="dashboard-sections">
         <RecordMeetingCard />
-        <UploadFilesCard user={user} onUploaded={refreshFiles} />
-        <FilesList files={files} onFilesChanged={refreshFiles} />
+        <UploadFilesCard user={user} onUploaded={handleFileUploaded} onError={setError} />
+        <FilesList files={files} onDelete={handleDelete} />
       </div>
     </div>
   )
@@ -102,13 +121,12 @@ function RecordMeetingCard() {
 }
 
 // Upload files UI
-function UploadFilesCard({ user, onUploaded }) {
+function UploadFilesCard({ user, onUploaded, onError }) {
   const fileInputRef = useRef(null)
   const [isDragOver, setIsDragOver] = useState(false)
   const [pendingFile, setPendingFile] = useState(null)
   const [consentGiven, setConsentGiven] = useState(false)
-  const [uploading, setUploading] = useState(false)
-  const [uploadError, setUploadError] = useState('')
+  const [processing, setProcessing] = useState(false)
 
   const openFilePicker = () => fileInputRef.current?.click()
 
@@ -130,18 +148,27 @@ function UploadFilesCard({ user, onUploaded }) {
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
+  const handleChangeFile = () => {
+    cancelUpload()
+    openFilePicker()
+  }
+
   const processFile = async () => {
-    if (!pendingFile || !user) return
-    setUploading(true)
-    setUploadError('')
-    try {
-      await filesService.uploadFile(pendingFile, user.id)
-      onUploaded?.()
+    if (!pendingFile.type.startsWith('audio') && !pendingFile.type.startsWith('video')) {
+      onError('Only audio and video files can be transcribed right now.')
       cancelUpload()
+      return
+    }
+
+    setProcessing(true)
+    try {
+      const fileRow = await uploadMediaForTranscription(user, pendingFile)
+      onUploaded(fileRow)
     } catch (err) {
-      setUploadError(err.message || 'Upload failed')
+      onError(err.message)
     } finally {
-      setUploading(false)
+      setProcessing(false)
+      cancelUpload()
     }
   }
 
@@ -153,29 +180,33 @@ function UploadFilesCard({ user, onUploaded }) {
       </header>
 
       <div className="card-body">
-        <div
-          className={`drop-zone${isDragOver ? ' drop-zone-active' : ''}`}
-          onClick={openFilePicker}
-          onDragOver={(event) => {
-            event.preventDefault()
-            setIsDragOver(true)
-          }}
-          onDragLeave={() => setIsDragOver(false)}
-          onDrop={handleDrop}
-        >
-          <UploadCloudIcon className="drop-zone-icon" />
-          <h3>Drag and drop your files here</h3>
-          <p>Audio/Video: MP3, MP4, WAV, M4A &middot; Transcripts: TXT, DOCX, PDF, SRT, VTT</p>
-          <button
-            className="btn btn-primary"
-            onClick={(event) => {
-              event.stopPropagation() // don't let the drop-zone's own onClick fire twice
-              openFilePicker()
+        {pendingFile ? (
+          <FilePreview file={pendingFile} onChangeFile={handleChangeFile} />
+        ) : (
+          <div
+            className={`drop-zone${isDragOver ? ' drop-zone-active' : ''}`}
+            onClick={openFilePicker}
+            onDragOver={(event) => {
+              event.preventDefault()
+              setIsDragOver(true)
             }}
+            onDragLeave={() => setIsDragOver(false)}
+            onDrop={handleDrop}
           >
-            Browse Files
-          </button>
-        </div>
+            <UploadCloudIcon className="drop-zone-icon" />
+            <h3>Drag and drop your files here</h3>
+            <p>Audio/Video: MP3, MP4, WAV, M4A &middot; Transcripts: TXT, DOCX, PDF, SRT, VTT</p>
+            <button
+              className="btn btn-primary"
+              onClick={(event) => {
+                event.stopPropagation() // don't let the drop-zone's own onClick fire twice
+                openFilePicker()
+              }}
+            >
+              Browse Files
+            </button>
+          </div>
+        )}
 
         <input
           ref={fileInputRef}
@@ -201,10 +232,10 @@ function UploadFilesCard({ user, onUploaded }) {
             </label>
             {uploadError && <p className="consent-warning">{uploadError}</p>}
             <div className="consent-actions">
-              <button className="btn btn-primary" disabled={!consentGiven || uploading} onClick={processFile}>
-                {uploading ? 'Uploading...' : 'Process File'}
+              <button className="btn btn-primary" disabled={!consentGiven || processing} onClick={processFile}>
+                {processing ? 'Processing…' : 'Process File'}
               </button>
-              <button className="btn btn-ghost" onClick={cancelUpload} disabled={uploading}>
+              <button className="btn btn-ghost" onClick={cancelUpload} disabled={processing}>
                 Cancel
               </button>
             </div>
@@ -216,7 +247,7 @@ function UploadFilesCard({ user, onUploaded }) {
 }
 
 // Files list UI
-function FilesList({ files, onFilesChanged }) {
+function FilesList({ files, onDelete }) {
   const [activeTab, setActiveTab] = useState('video')
 
   const filtered = files.filter((file) => file.type === activeTab)
@@ -249,7 +280,33 @@ function FilesList({ files, onFilesChanged }) {
         {filtered.length === 0 ? (
           <div className="file-list-empty">No files in this category yet.</div>
         ) : (
-          filtered.map((file) => <FileRow key={file.id} file={file} onDeleted={onFilesChanged} />)
+          filtered.map((file) => (
+            <div key={file.id} className="file-row">
+              <div className="file-icon">{fileIconFor(file.type)}</div>
+
+              <div className="file-meta">
+                <div className="file-name">{file.name}</div>
+                <div className="file-details">
+                  {file.duration && (
+                    <span>
+                      <ClockIcon /> {file.duration}
+                    </span>
+                  )}
+                  <span>{formatDate(file.created_at)}</span>
+                  <span className={`badge badge-${file.status}`}>{file.status}</span>
+                </div>
+              </div>
+
+              <div className="file-actions">
+                <a className="btn btn-outline btn-sm" href={file.media_url} target="_blank" rel="noreferrer">
+                  <DownloadIcon /> Download
+                </a>
+                <button className="btn btn-ghost btn-sm" onClick={() => onDelete(file)}>
+                  <TrashIcon /> Delete
+                </button>
+              </div>
+            </div>
+          ))
         )}
       </div>
     </section>
