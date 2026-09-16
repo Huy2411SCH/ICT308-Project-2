@@ -21,7 +21,8 @@
   flex-shrink: 0;
 }
 
-.btn:disabled {
+.btn:disabled,
+.btn-disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }
@@ -66,6 +67,16 @@
 
 .btn-sm {
   padding: 5px 8px;
+  font-size: 13px;
+}
+
+/* Inline error banner */
+.file-list-error {
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  border-radius: var(--radius-sm);
+  background: #fdecea;
+  color: var(--color-danger);
   font-size: 13px;
 }
 
