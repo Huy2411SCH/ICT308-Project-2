@@ -68,6 +68,17 @@ export const filesService = {
     return data.signedUrl
   },
 
+  async updateTranscript(fileId, transcript) {
+    const { data, error } = await supabase
+      .from('files')
+      .update({ transcript })
+      .eq('id', fileId)
+      .select()
+      .single()
+    if (error) throw error
+    return data
+  },
+
   async deleteFile(file) {
     if (file.media_url) {
       const { error: storageError } = await supabase.storage.from(BUCKET).remove([file.media_url])
@@ -75,5 +86,20 @@ export const filesService = {
     }
     const { error } = await supabase.from('files').delete().eq('id', file.id)
     if (error) throw error
+  },
+
+  // Calls `onChange` with the updated row whenever this file changes (e.g.
+  // status flipping from 'processing' to 'ready'). Returns an unsubscribe function.
+  subscribeToFile(fileId, onChange) {
+    const channel = supabase
+      .channel(`file-${fileId}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'files', filter: `id=eq.${fileId}` },
+        (payload) => onChange(payload.new)
+      )
+      .subscribe()
+
+    return () => supabase.removeChannel(channel)
   },
 }

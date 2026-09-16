@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { FileTextIcon, ClockIcon, DownloadIcon, TrashIcon, VideoIcon, MicIcon, UploadCloudIcon, ChevronDownIcon } from '../components/icons'
+import { useNavigate } from 'react-router-dom'
+import { FileTextIcon, ClockIcon, DownloadIcon, TrashIcon, VideoIcon, MicIcon, UploadCloudIcon } from '../components/icons'
 import FilePreview from '../components/FilePreview'
 import { uploadMediaForTranscription, fetchFiles, deleteFile, subscribeToFiles, getMediaDownloadUrl } from '../lib/transcription'
 import './Files.css'
@@ -8,7 +9,6 @@ const TABS = [
   { key: 'all', label: 'All' },
   { key: 'video', label: 'Videos' },
   { key: 'audio', label: 'Audio' },
-  { key: 'transcript', label: 'Transcripts' },
 ]
 
 function fileIconFor(type) {
@@ -21,39 +21,24 @@ function formatDate(isoString) {
   return new Date(isoString).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
 }
 
-// Transcripts generated with speaker labels look like "Speaker A: ...\n\nSpeaker B: ...".
-// Render each turn as its own line with the speaker name bolded; older
-// transcripts with no speaker prefix just render as a single block.
-function TranscriptView({ text }) {
-  return text.split('\n\n').map((turn, i) => {
-    const match = turn.match(/^(Speaker \w+):\s*([\s\S]*)$/)
-    return (
-      <p key={i} className="transcript-line">
-        {match ? (
-          <>
-            <strong>{match[1]}:</strong> {match[2]}
-          </>
-        ) : (
-          turn
-        )}
-      </p>
-    )
-  })
-}
-
 export default function Files({ user }) {
+  const navigate = useNavigate()
   const fileInputRef = useRef(null)
   const [activeTab, setActiveTab] = useState('all')
   const [files, setFiles] = useState([])
   const [pendingFile, setPendingFile] = useState(null)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState(null)
-  const [expandedId, setExpandedId] = useState(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (!user) return
 
-    const loadFiles = () => fetchFiles().then(setFiles).catch((err) => setError(err.message))
+    const loadFiles = () =>
+      fetchFiles()
+        .then(setFiles)
+        .catch((err) => setError(err.message))
+        .finally(() => setLoading(false))
 
     loadFiles()
 
@@ -169,53 +154,37 @@ export default function Files({ user }) {
         ) : filtered.length === 0 ? (
           <div className="file-list-empty">No files in this category yet.</div>
         ) : (
-          filtered.map((file) => {
-            const isExpanded = expandedId === file.id
-            return (
-              <div key={file.id} className="file-row-wrap">
-                <div className="file-row">
-                  <div className="file-icon">{fileIconFor(file.type)}</div>
+          filtered.map((file) => (
+            <div
+              key={file.id}
+              className="file-row file-row-clickable"
+              onClick={() => navigate(`/files/${file.id}`)}
+            >
+              <div className="file-icon">{fileIconFor(file.type)}</div>
 
-                  <div className="file-meta">
-                    <div className="file-name">{file.name}</div>
-                    <div className="file-details">
-                      {file.duration && (
-                        <span>
-                          <ClockIcon /> {file.duration}
-                        </span>
-                      )}
-                      <span>{formatDate(file.created_at)}</span>
-                      <span className={`badge badge-${file.status}`}>{file.status}</span>
-                    </div>
-                  </div>
-
-                  <div className="file-actions">
-                    {file.transcript && (
-                      <button
-                        className="btn btn-outline btn-sm"
-                        onClick={() => setExpandedId(isExpanded ? null : file.id)}
-                      >
-                        <ChevronDownIcon className={isExpanded ? 'icon-flipped' : ''} />
-                        {isExpanded ? 'Hide' : 'View'} Transcript
-                      </button>
-                    )}
-                    <button className="btn btn-outline btn-sm" onClick={() => handleDownload(file)}>
-                      <DownloadIcon /> Download
-                    </button>
-                    <button className="btn btn-ghost btn-sm" onClick={() => handleDelete(file)}>
-                      <TrashIcon /> Delete
-                    </button>
-                  </div>
+              <div className="file-meta">
+                <div className="file-name">{file.name}</div>
+                <div className="file-details">
+                  {file.duration && (
+                    <span>
+                      <ClockIcon /> {file.duration}
+                    </span>
+                  )}
+                  <span>{formatDate(file.created_at)}</span>
+                  <span className={`badge badge-${file.status}`}>{file.status}</span>
                 </div>
-
-                {isExpanded && (
-                  <div className="file-transcript">
-                    <TranscriptView text={file.transcript} />
-                  </div>
-                )}
               </div>
-            )
-          })
+
+              <div className="file-actions" onClick={(event) => event.stopPropagation()}>
+                <button className="btn btn-outline btn-sm" onClick={() => handleDownload(file)}>
+                  <DownloadIcon /> Download
+                </button>
+                <button className="btn btn-ghost btn-sm" onClick={() => handleDelete(file)}>
+                  <TrashIcon /> Delete
+                </button>
+              </div>
+            </div>
+          ))
         )}
       </section>
     </div>

@@ -1,12 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   MicIcon,
   VideoIcon,
   StopIcon,
   UploadCloudIcon,
+  FileTextIcon,
+  ClockIcon,
+  DownloadIcon,
+  TrashIcon,
 } from '../components/icons'
 import FilePreview from '../components/FilePreview'
-import { uploadMediaForTranscription, fetchFiles, deleteFile, subscribeToFiles } from '../lib/transcription'
+import { uploadMediaForTranscription, fetchFiles, deleteFile, subscribeToFiles, getMediaDownloadUrl } from '../lib/transcription'
 import './Dashboard.css'
 
 function fileIconFor(type) {
@@ -58,7 +63,7 @@ export default function Dashboard({ user }) {
       <div className="dashboard-sections">
         <RecordMeetingCard />
         <UploadFilesCard user={user} onUploaded={handleFileUploaded} onError={setError} />
-        <FilesList files={files} onDelete={handleDelete} />
+        <FilesList files={files} onDelete={handleDelete} onError={setError} />
       </div>
     </div>
   )
@@ -127,6 +132,7 @@ function UploadFilesCard({ user, onUploaded, onError }) {
   const [pendingFile, setPendingFile] = useState(null)
   const [consentGiven, setConsentGiven] = useState(false)
   const [processing, setProcessing] = useState(false)
+  const [uploadError, setUploadError] = useState('')
 
   const openFilePicker = () => fileInputRef.current?.click()
 
@@ -161,14 +167,15 @@ function UploadFilesCard({ user, onUploaded, onError }) {
     }
 
     setProcessing(true)
+    setUploadError('')
     try {
       const fileRow = await uploadMediaForTranscription(user, pendingFile)
       onUploaded(fileRow)
+      cancelUpload()
     } catch (err) {
-      onError(err.message)
+      setUploadError(err.message)
     } finally {
       setProcessing(false)
-      cancelUpload()
     }
   }
 
@@ -195,7 +202,7 @@ function UploadFilesCard({ user, onUploaded, onError }) {
           >
             <UploadCloudIcon className="drop-zone-icon" />
             <h3>Drag and drop your files here</h3>
-            <p>Audio/Video: MP3, MP4, WAV, M4A &middot; Transcripts: TXT, DOCX, PDF, SRT, VTT</p>
+            <p>Audio/Video: MP3, MP4, WAV, M4A</p>
             <button
               className="btn btn-primary"
               onClick={(event) => {
@@ -212,7 +219,7 @@ function UploadFilesCard({ user, onUploaded, onError }) {
           ref={fileInputRef}
           type="file"
           className="visually-hidden"
-          accept="audio/*,video/*,.txt,.docx,.pdf,.srt,.vtt"
+          accept="audio/*,video/*"
           onChange={(event) => handleFilesSelected(event.target.files)}
         />
 
@@ -247,10 +254,20 @@ function UploadFilesCard({ user, onUploaded, onError }) {
 }
 
 // Files list UI
-function FilesList({ files, onDelete }) {
+function FilesList({ files, onDelete, onError }) {
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('video')
 
   const filtered = files.filter((file) => file.type === activeTab)
+
+  const handleDownload = async (file) => {
+    try {
+      const url = await getMediaDownloadUrl(file.media_url)
+      window.open(url, '_blank', 'noopener,noreferrer')
+    } catch (err) {
+      onError(err.message)
+    }
+  }
 
   return (
     <section>
@@ -268,12 +285,6 @@ function FilesList({ files, onDelete }) {
         >
           Audio
         </button>
-        <button
-          className={`file-tab${activeTab === 'transcript' ? ' file-tab-active' : ''}`}
-          onClick={() => setActiveTab('transcript')}
-        >
-          Transcripts
-        </button>
       </div>
 
       <div className="card file-list">
@@ -281,7 +292,11 @@ function FilesList({ files, onDelete }) {
           <div className="file-list-empty">No files in this category yet.</div>
         ) : (
           filtered.map((file) => (
-            <div key={file.id} className="file-row">
+            <div
+              key={file.id}
+              className="file-row file-row-clickable"
+              onClick={() => navigate(`/files/${file.id}`)}
+            >
               <div className="file-icon">{fileIconFor(file.type)}</div>
 
               <div className="file-meta">
@@ -297,10 +312,10 @@ function FilesList({ files, onDelete }) {
                 </div>
               </div>
 
-              <div className="file-actions">
-                <a className="btn btn-outline btn-sm" href={file.media_url} target="_blank" rel="noreferrer">
+              <div className="file-actions" onClick={(event) => event.stopPropagation()}>
+                <button className="btn btn-outline btn-sm" onClick={() => handleDownload(file)}>
                   <DownloadIcon /> Download
-                </a>
+                </button>
                 <button className="btn btn-ghost btn-sm" onClick={() => onDelete(file)}>
                   <TrashIcon /> Delete
                 </button>
