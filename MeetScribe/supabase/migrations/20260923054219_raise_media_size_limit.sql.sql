@@ -1,0 +1,1 @@
+update storage.buckets set file_size_limit = 734003200 where id = 'media';
