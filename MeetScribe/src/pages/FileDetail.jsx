@@ -152,13 +152,13 @@ export default function FileDetail() {
 
   const turns = toTurns(file?.transcript)
   const speakers = speakersIn(turns)
-
+// Returns the text to copy to the clipboard,
+//  depending on the active tab 
   const handleCopy = async () => {
-    const text = activeTab === 'summary' && file.summary
-      ? typeof file.summary === 'object'
-        ? [file.summary.overview, ...(file.summary.keyPoints || [])].join('\n')
-        : file.summary
+    const text = activeTab === 'summary' && isStructuredSummary(file.summary)
+      ? summaryToText(file.summary)
       : turnsToText(turns)
+
 
     try {
       await navigator.clipboard.writeText(text)
@@ -166,6 +166,19 @@ export default function FileDetail() {
       setTimeout(() => setCopied(false), 1500)
     } catch (err) {
       console.error('Failed to copy:', err)
+    }
+  }
+  const handleGenerateSummary = async () => {
+    setSummarizing(true)
+    setSummaryError(null)
+    try {
+      const updated = await filesService.generateSummary(file.id)
+      setFile((prev) => ({ ...prev, summary: updated.summary }))
+    } catch (err) {
+     console.error('Failed to generate summary:', err)
+      setSummaryError('Could not generate a summary. Please try again.')
+    } finally {
+     setSummarizing(false)
     }
   }
 
