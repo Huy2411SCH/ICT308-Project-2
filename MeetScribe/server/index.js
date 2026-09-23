@@ -56,12 +56,15 @@ app.post('/transcribe', async (req, res) => {
       return
     }
 
-    const duration = formatDuration(transcript.audio_duration)
+const duration = formatDuration(transcript.audio_duration)
+const transcriptText = formatTranscript(transcript)
+const summary = await generateSummary(transcriptText)
+ 
+const { error } = await supabase
+    .from('files')
+    .update({ transcript: transcriptText, status: 'ready', duration, summary })
+    .eq('id', fileId)
 
-    const { error } = await supabase
-      .from('files')
-      .update({ transcript: formatTranscript(transcript), status: 'ready', duration })
-      .eq('id', fileId)
 
     if (error) console.error(`Failed to save transcript for ${fileId}:`, error)
   } catch (err) {
@@ -155,6 +158,34 @@ async function generateSummary(transcriptText) {
   }
 }
 
+// Exposes an endpoint to generate a summary for a transcript that has already been saved in the database.
+//  Returns the summary if successful, or an error if not.
+app.post('/summarize', async (req, res) => {
+  const { fileId } = req.body || {}
+  if (!fileId) return res.status(400).json({ error: 'fileId is required' })
+ 
+  const { data: file, error: fetchError } = await supabase
+    .from('files')
+    .select('transcript')
+    .eq('id', fileId)
+    .single()
+ 
+  if (fetchError) return res.status(404).json({ error: 'File not found' })
+  if (!file.transcript) return res.status(400).json({ error: 'File has no transcript yet' })
+ 
+  try {
+    const summary = await generateSummary(file.transcript)
+    if (!summary) return res.status(502).json({ error: 'Summary generation failed' })
+ 
+    const { data, error } = await supabase.from('files').update({ summary }).eq('id', fileId).select().single()
+    if (error) throw error
+ 
+    res.json(data)
+  } catch (err) {
+    console.error(`Summary generation for ${fileId} failed:`, err)
+    res.status(502).json({ error: 'Summary generation failed' })
+  }
+})
 
 const PORT = process.env.PORT || 3001
 app.listen(PORT, () => console.log(`Transcription server listening on port ${PORT}`))

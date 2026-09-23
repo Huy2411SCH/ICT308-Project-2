@@ -1,7 +1,7 @@
 import { supabase } from './supabaseClient'
 
 const BUCKET = 'media'
-
+const SUMMARIZE_ENDPOINT = 'http://localhost:3001/summarize' //Change when deployed to production
 function inferFileType(file) {
   const mime = file.type || ''
   if (mime.startsWith('video/')) return 'video'
@@ -87,6 +87,16 @@ export const filesService = {
     const { error } = await supabase.from('files').delete().eq('id', file.id)
     if (error) throw error
   },
+  async generateSummary(fileId) {
+  const res = await fetch(SUMMARIZE_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fileId }),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Failed to generate summary')
+  return data
+},
 
   // Calls `onChange` with the updated row whenever this file changes (e.g.
   // status flipping from 'processing' to 'ready'). Returns an unsubscribe function.
@@ -103,3 +113,5 @@ export const filesService = {
     return () => supabase.removeChannel(channel)
   },
 }
+
+  
