@@ -30,6 +30,18 @@ function formatTranscript(transcript) {
   return transcript.text
 }
 
+// Marks a file as failed so the UI can stop showing "still processing"
+// forever. Best-effort: if this write itself fails, the row is just left at
+// whatever status it already had rather than compounding the original error.
+async function markFileError(fileId) {
+  try {
+    const { error } = await supabase.from('files').update({ status: 'error' }).eq('id', fileId)
+    if (error) console.error(`Failed to mark ${fileId} as error:`, error)
+  } catch (err) {
+    console.error(`Failed to mark ${fileId} as error:`, err)
+  }
+}
+
 // Kicks off transcription for a file already uploaded to Supabase Storage.
 // Responds immediately; the file's `status`/`transcript` columns are updated
 // once AssemblyAI finishes.
@@ -53,22 +65,26 @@ app.post('/transcribe', async (req, res) => {
 
     if (transcript.status === 'error') {
       console.error(`Transcription ${fileId} failed:`, transcript.error)
+      await markFileError(fileId)
       return
     }
 
-const duration = formatDuration(transcript.audio_duration)
-const transcriptText = formatTranscript(transcript)
-const summary = await generateSummary(transcriptText)
- 
-const { error } = await supabase
-    .from('files')
-    .update({ transcript: transcriptText, status: 'ready', duration, summary })
-    .eq('id', fileId)
+    const duration = formatDuration(transcript.audio_duration)
+    const transcriptText = formatTranscript(transcript)
+    const summary = await generateSummary(transcriptText)
 
+    const { error } = await supabase
+      .from('files')
+      .update({ transcript: transcriptText, status: 'ready', duration, summary })
+      .eq('id', fileId)
 
-    if (error) console.error(`Failed to save transcript for ${fileId}:`, error)
+    if (error) {
+      console.error(`Failed to save transcript for ${fileId}:`, error)
+      await markFileError(fileId)
+    }
   } catch (err) {
     console.error(`Transcription ${fileId} threw:`, err)
+    await markFileError(fileId)
   }
 })
 

@@ -200,6 +200,10 @@
   padding: 32px 24px;
 }
 
+.processing-notice-error {
+  color: var(--color-danger);
+}
+
 .transcript-body {
   display: flex;
   flex-direction: column;

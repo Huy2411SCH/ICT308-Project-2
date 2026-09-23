@@ -100,6 +100,22 @@ export default function FileDetail() {
     })
   }, [id])
 
+  // Realtime can miss the status flip (e.g. it lands before the channel is
+  // subscribed), so poll as a fallback while the file is still processing.
+  const awaitingResult = file?.status === 'processing'
+  useEffect(() => {
+    if (!awaitingResult) return
+    const interval = setInterval(() => {
+      filesService
+        .getFile(id)
+        .then((row) => {
+          if (row.status !== 'processing') setFile(normalizeDbFile(row))
+        })
+        .catch((err) => console.error('Failed to refresh file:', err))
+    }, 5000)
+    return () => clearInterval(interval)
+  }, [id, awaitingResult])
+
   useEffect(() => {
     if (!file?.media_url) return
     let cancelled = false
@@ -283,7 +299,13 @@ export default function FileDetail() {
         </div>
       </div>
 
-      {isProcessing ? (
+      {file.status === 'error' ? (
+        <div className="card">
+          <div className="card-body processing-notice processing-notice-error">
+            Transcription failed. Please try uploading the file again.
+          </div>
+        </div>
+      ) : isProcessing ? (
         <div className="card">
           <div className="card-body processing-notice">Transcription is still processing&hellip;</div>
         </div>

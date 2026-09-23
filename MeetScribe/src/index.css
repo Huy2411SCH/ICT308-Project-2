@@ -20,6 +20,8 @@
   --color-success-text: #059669;
   --color-warning-bg: #fef3c7;
   --color-warning-text: #92400e;
+  --color-danger-bg: #fee2e2;
+  --color-danger-text: #b91c1c;
 
   /* Neutrals */
   --color-bg: #f9fafb;
