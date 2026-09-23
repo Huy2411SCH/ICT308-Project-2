@@ -186,6 +186,19 @@ app.post('/summarize', async (req, res) => {
     res.status(502).json({ error: 'Summary generation failed' })
   }
 })
+const GEMINI_MODEL = 'gemini-3.6-flash'
+ 
+// Gemini's Node.js client is an ESM-only package, 
+// so we dynamically import it on first use to avoid breaking the CommonJS server code.
+let geminiClientPromise
+function getGeminiClient() {
+  if (!geminiClientPromise) {
+    geminiClientPromise = import('@google/genai').then(
+      ({ GoogleGenAI }) => new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
+    )
+  }
+  return geminiClientPromise
+}
 
 const PORT = process.env.PORT || 3001
 app.listen(PORT, () => console.log(`Transcription server listening on port ${PORT}`))
