@@ -322,31 +322,7 @@ export default function FileDetail() {
 
           {activeTab === 'summary' ? (
             <div className="card-body">
-              {file.summary && typeof file.summary === 'object' ? (
-                <>
-                  <p className="summary-overview">{file.summary.overview}</p>
 
-                  <h3 className="summary-subtitle">Key Points</h3>
-                  <ul className="summary-list">
-                    {file.summary.keyPoints.map((point, index) => (
-                      <li key={index}>{point}</li>
-                    ))}
-                  </ul>
-
-                  {file.summary.actionItems?.length > 0 && (
-                    <>
-                      <h3 className="summary-subtitle">Action Items</h3>
-                      <ul className="summary-list">
-                        {file.summary.actionItems.map((item, index) => (
-                          <li key={index}>{item}</li>
-                        ))}
-                      </ul>
-                    </>
-                  )}
-                </>
-              ) : (
-                <p className="summary-overview">No summary available yet.</p>
-              )}
             </div>
           ) : (
             <div className="card-body">
