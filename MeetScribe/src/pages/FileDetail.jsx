@@ -27,6 +27,21 @@ function fileIconFor(type) {
 function isMockFile(file) {
   return typeof file.id === 'number'
 }
+// Returns true if the given summary is a structured summary (with sections), 
+function isStructuredSummary(summary) {
+  return Boolean(summary) && Array.isArray(summary.sections)
+}
+// Converts a structured summary into a plain text representation to dísplay in the UI or copy to the clipboard. Returns an empty string if the summary is not structured.
+function summaryToText(summary) {
+  const lines = [summary.title, summary.intro].filter(Boolean)
+  for (const section of summary.sections) {
+    lines.push(section.heading, ...section.points.map((point) => `- ${point}`))
+  }
+  if (summary.actionItems?.length > 0) {
+    lines.push('Action Items', ...summary.actionItems.map((item) => `- ${item}`))
+  }
+  return lines.join('\n')
+}
 
 // Transcripts generated with speaker labels look like "Speaker A: ...\n\nSpeaker B: ...".
 // Older transcripts (and mock data) use an array of { speaker, time, text } turns instead.
@@ -62,6 +77,8 @@ export default function FileDetail() {
   const [isEditing, setIsEditing] = useState(false)
   const [draftTranscript, setDraftTranscript] = useState('')
   const [saving, setSaving] = useState(false)
+  const [summarizing, setSummarizing] = useState(false)
+  const [summaryError, setSummaryError] = useState(null)
 
   useEffect(() => {
     if (mockFile) return
@@ -110,7 +127,7 @@ export default function FileDetail() {
 
   // Default to the Transcript tab when there's nothing to summarize yet.
   useEffect(() => {
-    if (file && !file.summary) setActiveTab('transcript')
+    if (file && !isStructuredSummary(file.summary)) setActiveTab('transcript')
   }, [file])
 
   useEffect(() => {
