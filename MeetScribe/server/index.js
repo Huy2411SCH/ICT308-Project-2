@@ -106,6 +106,54 @@ function escapeTranscriptForPrompt(transcriptText) {
   return transcriptText.replaceAll(/<\/transcript>/gi, '<\\/transcript>')
 }
 
+// Gemini's free tier has a very low rate limit, so we retry on 503/429 errors with exponential backoff.
+async function generateContentWithRetry(ai, params, attempts = 4) {
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      return await ai.models.generateContent(params)
+    } catch (err) {
+      const isRetryable = err.status === 503 || err.status === 429
+      if (!isRetryable || attempt === attempts) throw err
+      await new Promise((resolve) => setTimeout(resolve, attempt * 5000))
+    }
+  }
+}
+
+// Asks Gemini to summarize a transcript's text into a structured JSON object. Returns null if the request fails or the response is malformed.
+async function generateSummary(transcriptText) {
+  try {
+    const ai = await getGeminiClient()
+    const contents = SUMMARY_PROMPT + escapeTranscriptForPrompt(transcriptText) + '\n' + TRANSCRIPT_CLOSE_TAG
+    const result = await generateContentWithRetry(ai, {
+      model: GEMINI_MODEL,
+      contents,
+      config: { responseMimeType: 'application/json' },
+    })
+ 
+    const text = result.text
+    const jsonStart = text.indexOf('{')
+    const jsonEnd = text.lastIndexOf('}')
+    if (jsonStart === -1 || jsonEnd === -1) throw new Error('No JSON object in Gemini response')
+ 
+    const summary = JSON.parse(text.slice(jsonStart, jsonEnd + 1))
+    if (typeof summary.title !== 'string' || !Array.isArray(summary.sections)) {
+      throw new Error('Unexpected summary shape')
+    }
+ 
+    return {
+      title: summary.title,
+      intro: typeof summary.intro === 'string' ? summary.intro : '',
+      sections: summary.sections.map((section) => ({
+        heading: section.heading,
+        points: Array.isArray(section.points) ? section.points : [],
+      })),
+      actionItems: Array.isArray(summary.actionItems) ? summary.actionItems : [],
+    }
+  } catch (err) {
+    console.error('Summary generation failed:', err)
+    return null
+  }
+}
 
 
 const PORT = process.env.PORT || 3001
