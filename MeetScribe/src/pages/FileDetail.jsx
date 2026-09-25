@@ -15,7 +15,11 @@ import {
   PencilIcon,
 } from '../components/icons'
 import { filesService, normalizeDbFile } from '../lib/filesService'
+import { retryTranscription } from '../lib/transcription'
 import './FileDetail.css'
+
+// How long a file can sit in 'processing' before we offer to retry it.
+const STUCK_PROCESSING_MS = 15 * 60 * 1000
 
 function fileIconFor(type) {
   if (type === 'video') return <VideoIcon />
@@ -72,6 +76,9 @@ export default function FileDetail() {
   const [saving, setSaving] = useState(false)
   const [summarizing, setSummarizing] = useState(false)
   const [summaryError, setSummaryError] = useState(null)
+  const [retrying, setRetrying] = useState(false)
+  const [retryError, setRetryError] = useState(null)
+  const [now, setNow] = useState(() => Date.now())
 
   useEffect(() => {
     let cancelled = false
@@ -189,6 +196,33 @@ export default function FileDetail() {
     }
   }
 
+  // A job that's been processing this long has most likely died (e.g. the
+  // backend restarted mid-job), so offer a retry. Re-check once the threshold passes.
+  const processingSince = file?.status === 'processing'
+    ? new Date(file.processing_started_at || file.created_at).getTime()
+    : null
+  useEffect(() => {
+    if (processingSince === null) return
+    const msUntilStuck = processingSince + STUCK_PROCESSING_MS - Date.now()
+    const timeoutId = setTimeout(() => setNow(Date.now()), Math.max(0, msUntilStuck) + 1000)
+    return () => clearTimeout(timeoutId)
+  }, [processingSince])
+  const isStuck = processingSince !== null && now - processingSince >= STUCK_PROCESSING_MS
+
+  const handleRetryTranscription = async () => {
+    setRetrying(true)
+    setRetryError(null)
+    try {
+      const processingStartedAt = await retryTranscription(file)
+      setFile((prev) => ({ ...prev, status: 'processing', processing_started_at: processingStartedAt }))
+    } catch (err) {
+      console.error('Failed to retry transcription:', err)
+      setRetryError('Could not start transcription. Please try again in a moment.')
+    } finally {
+      setRetrying(false)
+    }
+  }
+
   const startEditing = () => {
     setDraftTranscript(turnsToText(turns))
     setIsEditing(true)
@@ -233,7 +267,18 @@ export default function FileDetail() {
     )
   }
 
-  const isProcessing = file.status === 'processing' || !file.transcript
+  const isProcessing = file.status === 'processing'
+  // Transcription finished but AssemblyAI heard nothing (silent recording).
+  const hasNoSpeech = !isProcessing && file.status !== 'error' && !file.transcript?.trim()
+
+  const retryControls = (
+    <>
+      <button className="btn btn-primary btn-sm retry-transcription-btn" onClick={handleRetryTranscription} disabled={retrying}>
+        {retrying ? 'Retrying…' : 'Retry transcription'}
+      </button>
+      {retryError && <p className="summary-error">{retryError}</p>}
+    </>
+  )
 
   return (
     <div className="file-detail-page">
@@ -293,7 +338,7 @@ export default function FileDetail() {
           )}
           <span className={`badge badge-${file.status}`}>{file.status}</span>
 
-          <button className="btn btn-outline btn-sm detail-copy-btn" onClick={handleCopy} disabled={isProcessing}>
+          <button className="btn btn-outline btn-sm detail-copy-btn" onClick={handleCopy} disabled={isProcessing || hasNoSpeech}>
             <CopyIcon /> {copied ? 'Copied!' : activeTab === 'summary' ? 'Copy summary' : 'Copy transcript'}
           </button>
         </div>
@@ -302,12 +347,25 @@ export default function FileDetail() {
       {file.status === 'error' ? (
         <div className="card">
           <div className="card-body processing-notice processing-notice-error">
-            Transcription failed. Please try uploading the file again.
+            <p>Transcription failed.</p>
+            {retryControls}
           </div>
         </div>
       ) : isProcessing ? (
         <div className="card">
-          <div className="card-body processing-notice">Transcription is still processing&hellip;</div>
+          <div className="card-body processing-notice">
+            <p>Transcription is still processing&hellip;</p>
+            {isStuck && (
+              <>
+                <p>This is taking longer than expected. If it doesn&rsquo;t finish, you can start it again.</p>
+                {retryControls}
+              </>
+            )}
+          </div>
+        </div>
+      ) : hasNoSpeech ? (
+        <div className="card">
+          <div className="card-body processing-notice">No speech was detected in this recording.</div>
         </div>
       ) : (
         <div className="card detail-content-card">

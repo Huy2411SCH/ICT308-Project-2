@@ -64,6 +64,25 @@
   color: var(--color-text-primary);
 }
 
+/* Meeting audio / browser support notices */
+.recording-warning {
+  max-width: 480px;
+  padding: 10px 14px;
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: center;
+  color: var(--color-warning-text);
+  background: var(--color-warning-bg);
+  border-radius: var(--radius-sm);
+}
+
+.recording-hint {
+  flex-basis: 100%;
+  text-align: center;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
 /* Upload files card */
 .drop-zone {
   padding: 48px 24px;

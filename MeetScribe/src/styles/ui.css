@@ -80,6 +80,28 @@
   font-size: 13px;
 }
 
+.error-banner {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.error-banner-close {
+  display: flex;
+  flex-shrink: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.error-banner-close svg {
+  width: 16px;
+  height: 16px;
+}
+
 /* Cards */
 .card {
   background: var(--color-surface);
