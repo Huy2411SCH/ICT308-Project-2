@@ -204,6 +204,10 @@
   color: var(--color-danger);
 }
 
+.retry-transcription-btn {
+  margin-top: 12px;
+}
+
 .transcript-body {
   display: flex;
   flex-direction: column;

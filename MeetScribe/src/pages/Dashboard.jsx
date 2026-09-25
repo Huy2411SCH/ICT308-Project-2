@@ -11,7 +11,16 @@ import {
   TrashIcon,
 } from '../components/icons'
 import FilePreview from '../components/FilePreview'
-import { uploadMediaForTranscription, fetchFiles, deleteFile, subscribeToFiles, getMediaDownloadUrl } from '../lib/transcription'
+import ErrorBanner from '../components/ErrorBanner'
+import {
+  uploadMediaForTranscription,
+  fetchFiles,
+  deleteFile,
+  subscribeToFiles,
+  getMediaDownloadUrl,
+  TRANSCRIPTION_NOT_STARTED_MESSAGE,
+} from '../lib/transcription'
+import { startMeetingRecording, isSystemAudioCaptureSupported } from '../lib/meetingRecorder'
 import './Dashboard.css'
 
 function fileIconFor(type) {
@@ -71,10 +80,10 @@ export default function Dashboard({ user }) {
     <div className="dashboard-page">
       <h1 className="dashboard-title">Welcome back, {user?.user_metadata?.name || user?.email || 'there'}</h1>
 
-      {error && <div className="file-list-error">{error}</div>}
+      <ErrorBanner message={error} onClose={() => setError(null)} />
 
       <div className="dashboard-sections">
-        <RecordMeetingCard />
+        <RecordMeetingCard user={user} onUploaded={handleFileUploaded} onError={setError} />
         <UploadFilesCard user={user} onUploaded={handleFileUploaded} onError={setError} />
         <FilesList files={files} onDelete={handleDelete} onError={setError} />
       </div>
@@ -83,9 +92,16 @@ export default function Dashboard({ user }) {
 }
 
 // Record meeting UI
-function RecordMeetingCard() {
+function RecordMeetingCard({ user, onUploaded, onError }) {
   const [recordingMode, setRecordingMode] = useState(null) // null | 'audio' | 'video'
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
+  const [isSaving, setIsSaving] = useState(false)
+  const [warning, setWarning] = useState('')
+  // A stopped recording waiting for the user to upload, re-record or discard it.
+  const [recording, setRecording] = useState(null) // null | { file, mode }
+  const [consentGiven, setConsentGiven] = useState(false)
+  const sessionRef = useRef(null)
+  const captureSupported = isSystemAudioCaptureSupported()
 
   useEffect(() => {
     if (!recordingMode) return
@@ -93,22 +109,89 @@ function RecordMeetingCard() {
     return () => clearInterval(intervalId)
   }, [recordingMode])
 
-  const startRecording = (mode) => {
-    // TODO: request mic/camera permission and start a MediaRecorder here.
-    setElapsedSeconds(0)
-    setRecordingMode(mode)
+  // Release mic / screen share if the user navigates away mid-recording.
+  useEffect(() => () => sessionRef.current?.cancel(), [])
+
+  // Ask before closing/reloading the tab while there's a recording that isn't uploaded yet.
+  const hasUnsavedRecording = Boolean(recordingMode || recording)
+  useEffect(() => {
+    if (!hasUnsavedRecording) return
+    const warnBeforeUnload = (event) => event.preventDefault()
+    window.addEventListener('beforeunload', warnBeforeUnload)
+    return () => window.removeEventListener('beforeunload', warnBeforeUnload)
+  }, [hasUnsavedRecording])
+
+  // Resolves to true once recording has actually started.
+  const startRecording = async (mode) => {
+    setWarning('')
+    if (!captureSupported) {
+      onError('Your browser cannot capture meeting audio. Please use Chrome or Edge.')
+      return false
+    }
+    try {
+      const session = await startMeetingRecording({
+        mode, onAutoStop: () => stopRecording(),
+      })
+      sessionRef.current = { ...session, mode }
+      if (!session.hasSystemAudio) {
+        setWarning('No meeting audio was shared - only your microphone is being recorded. ' +
+          'Stop and try again, ticking "Share tab audio" / "Share system audio".')
+      }
+      setElapsedSeconds(0)
+      setRecordingMode(mode)
+      return true
+    } catch (err) {
+      if (err.name === 'NotAllowedError') {
+        onError('Recording was cancelled or permission was denied.')
+      } else onError(err.message)
+      return false
+    }
   }
 
-  const stopRecording = () => {
-    // TODO: stop the MediaRecorder and hand the resulting blob off for upload.
+  // Stops capturing and holds the file for review instead of uploading it straight away.
+  const stopRecording = async () => {
+    const session = sessionRef.current
+    if (!session) return
+    sessionRef.current = null
     setRecordingMode(null)
+    setWarning('')
+    const file = await session.stop()
+    if (!file.size) {
+      onError('The recording was empty. Please try again.')
+      return
+    }
+    setConsentGiven(false)
+    setRecording({ file, mode: session.mode })
+  }
+
+  const uploadRecording = async () => {
+    setIsSaving(true)
+    try {
+      const fileRow = await uploadMediaForTranscription(user, recording.file)
+      onUploaded(fileRow)
+      setRecording(null)
+      if (fileRow.status === 'error') onError(TRANSCRIPTION_NOT_STARTED_MESSAGE)
+    } catch (err) {
+      onError(err.message)
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  // Keep the current take until the new one actually starts, so cancelling
+  // the screen picker doesn't throw the old recording away.
+  const recordAgain = async () => {
+    if (await startRecording(recording.mode)) setRecording(null)
   }
 
   return (
     <section className="card">
       <header className="card-header">
         <h2 className="card-title">Record Meeting</h2>
-        <p className="card-subtitle">Record a meeting directly in your browser using your microphone or camera</p>
+        <p className="card-subtitle">
+          Record your microphone together with the meeting audio. When prompted, choose your meeting tab
+          and tick &ldquo;Share tab audio&rdquo;.
+        </p>
       </header>
 
       <div className="card-body">
@@ -119,9 +202,39 @@ function RecordMeetingCard() {
               Recording {recordingMode}&hellip;
             </div>
             <div className="recording-timer">{formatElapsed(elapsedSeconds)}</div>
+            {warning && <div className="recording-warning">{warning}</div>}
             <button className="btn btn-danger btn-lg" onClick={stopRecording}>
               <StopIcon /> Stop Recording
             </button>
+          </div>
+        ) : recording ? (
+          <div className="recording-review">
+            <FilePreview file={recording.file} />
+            <div className="consent-panel">
+              <p className="consent-warning">
+                <strong>Consent required.</strong> Confirm all participants have consented to recording and
+                AI-based processing before <em>{recording.file.name}</em> is processed.
+              </p>
+              <label className="consent-checkbox">
+                <input
+                  type="checkbox"
+                  checked={consentGiven}
+                  onChange={(event) => setConsentGiven(event.target.checked)}
+                />
+                I confirm all participants have given consent.
+              </label>
+              <div className="consent-actions">
+                <button className="btn btn-primary" disabled={!consentGiven || isSaving} onClick={uploadRecording}>
+                  {isSaving ? 'Uploading…' : 'Upload Recording'}
+                </button>
+                <button className="btn btn-outline" disabled={isSaving} onClick={recordAgain}>
+                  Record Again
+                </button>
+                <button className="btn btn-ghost" disabled={isSaving} onClick={() => setRecording(null)}>
+                  Discard
+                </button>
+              </div>
+            </div>
           </div>
         ) : (
           <div className="recording-idle">
@@ -131,6 +244,10 @@ function RecordMeetingCard() {
             <button className="btn btn-outline btn-lg" onClick={() => startRecording('video')}>
               <VideoIcon /> Record Video
             </button>
+            {!captureSupported && (
+              <p className="recording-hint">Meeting recording needs Chrome or Edge on a desktop computer.</p>
+            )}
+            <p className="recording-hint">Let participants know you are recording.</p>
           </div>
         )}
       </div>
@@ -185,6 +302,7 @@ function UploadFilesCard({ user, onUploaded, onError }) {
       const fileRow = await uploadMediaForTranscription(user, pendingFile)
       onUploaded(fileRow)
       cancelUpload()
+      if (fileRow.status === 'error') onError(TRANSCRIPTION_NOT_STARTED_MESSAGE)
     } catch (err) {
       setUploadError(err.message)
     } finally {

@@ -2,7 +2,15 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { FileTextIcon, ClockIcon, DownloadIcon, TrashIcon, VideoIcon, MicIcon, UploadCloudIcon } from '../components/icons'
 import FilePreview from '../components/FilePreview'
-import { uploadMediaForTranscription, fetchFiles, deleteFile, subscribeToFiles, getMediaDownloadUrl } from '../lib/transcription'
+import ErrorBanner from '../components/ErrorBanner'
+import {
+  uploadMediaForTranscription,
+  fetchFiles,
+  deleteFile,
+  subscribeToFiles,
+  getMediaDownloadUrl,
+  TRANSCRIPTION_NOT_STARTED_MESSAGE,
+} from '../lib/transcription'
 import './Files.css'
 
 const TABS = [
@@ -80,6 +88,7 @@ export default function Files({ user }) {
       const fileRow = await uploadMediaForTranscription(user, pendingFile)
       setFiles((prev) => [fileRow, ...prev])
       cancelPendingFile()
+      if (fileRow.status === 'error') setError(TRANSCRIPTION_NOT_STARTED_MESSAGE)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -133,7 +142,7 @@ export default function Files({ user }) {
         />
       </div>
 
-      {error && <div className="file-list-error">{error}</div>}
+      <ErrorBanner message={error} onClose={() => setError(null)} />
 
       {pendingFile && (
         <section className="card file-upload-panel">
