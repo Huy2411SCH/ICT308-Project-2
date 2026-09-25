@@ -8,9 +8,7 @@ export const TRANSCRIPTION_NOT_STARTED_MESSAGE =
   "Your file was saved, but transcription couldn't start. Open it from Your Files to retry."
 
 // Uploads an audio/video file to Supabase Storage, creates its `files` row,
-// and kicks off transcription on the backend. Returns the inserted row. If
-// transcription couldn't be started, the file is still kept and the returned
-// row has status 'error', so the user can retry from the file page.
+// and kicks off transcription on the backend. Returns the inserted row. 
 export async function uploadMediaForTranscription(user, file) {
   const path = `${user.id}/${Date.now()}-${file.name}`
 
