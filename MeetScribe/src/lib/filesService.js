@@ -1,7 +1,8 @@
 import { supabase } from './supabaseClient'
 
 const BUCKET = 'media'
-const SUMMARIZE_ENDPOINT = 'http://localhost:3001/summarize' //Change when deployed to production
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+const SUMMARIZE_ENDPOINT = `${API_URL}/summarize`
 function inferFileType(file) {
   const mime = file.type || ''
   if (mime.startsWith('video/')) return 'video'

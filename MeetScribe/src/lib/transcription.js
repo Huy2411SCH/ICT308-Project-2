@@ -1,6 +1,7 @@
 import { supabase } from './supabaseClient'
 
-const TRANSCRIBE_ENDPOINT = 'http://localhost:3001/transcribe'
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+const TRANSCRIBE_ENDPOINT = `${API_URL}/transcribe`
 const SIGNED_URL_TTL_SECONDS = 60 * 60 // long enough for AssemblyAI to fetch the file
 
 export const TRANSCRIPTION_NOT_STARTED_MESSAGE =
