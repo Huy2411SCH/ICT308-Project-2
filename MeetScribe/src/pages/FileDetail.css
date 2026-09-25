@@ -200,6 +200,10 @@
   padding: 32px 24px;
 }
 
+.processing-notice-error {
+  color: var(--color-danger);
+}
+
 .transcript-body {
   display: flex;
   flex-direction: column;
@@ -225,12 +229,6 @@
   font-size: 13px;
   font-weight: 600;
   color: var(--color-primary);
-}
-
-.transcript-time {
-  font-size: 12px;
-  color: var(--color-text-faint);
-  font-variant-numeric: tabular-nums;
 }
 
 .summary-overview {
@@ -264,4 +262,28 @@
   font-size: 14px;
   color: var(--color-text-primary);
   line-height: 1.5;
+}
+.summary-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin-bottom: 8px;
+}
+ 
+.summary-section:not(:first-child) {
+  margin-top: 18px;
+}
+ 
+/* the old rule below was removed: */
+/* .summary-subtitle:not(:first-child) { margin-top: 18px; } */
+ 
+.summary-generate-btn,
+.summary-regenerate-btn {
+  margin-top: 18px;
+}
+ 
+.summary-error {
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--color-danger);
 }

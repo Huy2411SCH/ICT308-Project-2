@@ -46,6 +46,19 @@ export default function Files({ user }) {
     return subscribeToFiles(user.id, loadFiles)
   }, [user])
 
+  // Realtime can miss the status flip (e.g. it lands before the channel is
+  // subscribed), so poll as a fallback while any file is still processing.
+  const hasProcessing = files.some((file) => file.status === 'processing')
+  useEffect(() => {
+    if (!hasProcessing) return
+    const interval = setInterval(() => {
+      fetchFiles()
+        .then(setFiles)
+        .catch((err) => console.error('Failed to refresh files:', err))
+    }, 5000)
+    return () => clearInterval(interval)
+  }, [hasProcessing])
+
   const openFilePicker = () => fileInputRef.current?.click()
 
   const cancelPendingFile = () => {

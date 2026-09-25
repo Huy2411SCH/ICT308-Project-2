@@ -14,7 +14,6 @@ import {
   UsersIcon,
   PencilIcon,
 } from '../components/icons'
-import { MOCK_FILES } from '../data/mockFiles'
 import { filesService, normalizeDbFile } from '../lib/filesService'
 import './FileDetail.css'
 
@@ -24,15 +23,25 @@ function fileIconFor(type) {
   return <FileTextIcon />
 }
 
-function isMockFile(file) {
-  return typeof file.id === 'number'
+// Returns true if the given summary is a structured summary (with sections),
+function isStructuredSummary(summary) {
+  return Boolean(summary) && Array.isArray(summary.sections)
+}
+// Converts a structured summary into a plain text representation to dísplay in the UI or copy to the clipboard. Returns an empty string if the summary is not structured.
+function summaryToText(summary) {
+  const lines = [summary.title, summary.intro].filter(Boolean)
+  for (const section of summary.sections) {
+    lines.push(section.heading, ...section.points.map((point) => `- ${point}`))
+  }
+  if (summary.actionItems?.length > 0) {
+    lines.push('Action Items', ...summary.actionItems.map((item) => `- ${item}`))
+  }
+  return lines.join('\n')
 }
 
 // Transcripts generated with speaker labels look like "Speaker A: ...\n\nSpeaker B: ...".
-// Older transcripts (and mock data) use an array of { speaker, time, text } turns instead.
 function toTurns(transcript) {
   if (!transcript) return []
-  if (Array.isArray(transcript)) return transcript
   return transcript.split('\n\n').map((turn) => {
     const match = turn.match(/^(Speaker \w+):\s*([\s\S]*)$/)
     return match ? { speaker: match[1], text: match[2] } : { text: turn }
@@ -51,10 +60,9 @@ export default function FileDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const menuRef = useRef(null)
-  const mockFile = MOCK_FILES.find((f) => String(f.id) === id)
 
-  const [file, setFile] = useState(mockFile ?? null)
-  const [loading, setLoading] = useState(!mockFile)
+  const [file, setFile] = useState(null)
+  const [loading, setLoading] = useState(true)
   const [mediaUrl, setMediaUrl] = useState(null)
   const [activeTab, setActiveTab] = useState('summary')
   const [menuOpen, setMenuOpen] = useState(false)
@@ -62,9 +70,10 @@ export default function FileDetail() {
   const [isEditing, setIsEditing] = useState(false)
   const [draftTranscript, setDraftTranscript] = useState('')
   const [saving, setSaving] = useState(false)
+  const [summarizing, setSummarizing] = useState(false)
+  const [summaryError, setSummaryError] = useState(null)
 
   useEffect(() => {
-    if (mockFile) return
     let cancelled = false
 
     filesService
@@ -83,14 +92,29 @@ export default function FileDetail() {
     return () => {
       cancelled = true
     }
-  }, [id, mockFile])
+  }, [id])
 
   useEffect(() => {
-    if (mockFile) return
     return filesService.subscribeToFile(id, (row) => {
       setFile((prev) => (prev ? { ...prev, ...normalizeDbFile(row) } : normalizeDbFile(row)))
     })
-  }, [id, mockFile])
+  }, [id])
+
+  // Realtime can miss the status flip (e.g. it lands before the channel is
+  // subscribed), so poll as a fallback while the file is still processing.
+  const awaitingResult = file?.status === 'processing'
+  useEffect(() => {
+    if (!awaitingResult) return
+    const interval = setInterval(() => {
+      filesService
+        .getFile(id)
+        .then((row) => {
+          if (row.status !== 'processing') setFile(normalizeDbFile(row))
+        })
+        .catch((err) => console.error('Failed to refresh file:', err))
+    }, 5000)
+    return () => clearInterval(interval)
+  }, [id, awaitingResult])
 
   useEffect(() => {
     if (!file?.media_url) return
@@ -110,7 +134,7 @@ export default function FileDetail() {
 
   // Default to the Transcript tab when there's nothing to summarize yet.
   useEffect(() => {
-    if (file && !file.summary) setActiveTab('transcript')
+    if (file && !isStructuredSummary(file.summary)) setActiveTab('transcript')
   }, [file])
 
   useEffect(() => {
@@ -123,7 +147,7 @@ export default function FileDetail() {
   }, [menuOpen])
 
   const handleDelete = async () => {
-    if (!file || isMockFile(file)) return
+    if (!file) return
     if (!window.confirm(`Delete "${file.name}"? This can't be undone.`)) return
     try {
       await filesService.deleteFile(file)
@@ -135,13 +159,13 @@ export default function FileDetail() {
 
   const turns = toTurns(file?.transcript)
   const speakers = speakersIn(turns)
-
+// Returns the text to copy to the clipboard,
+//  depending on the active tab 
   const handleCopy = async () => {
-    const text = activeTab === 'summary' && file.summary
-      ? typeof file.summary === 'object'
-        ? [file.summary.overview, ...(file.summary.keyPoints || [])].join('\n')
-        : file.summary
+    const text = activeTab === 'summary' && isStructuredSummary(file.summary)
+      ? summaryToText(file.summary)
       : turnsToText(turns)
+
 
     try {
       await navigator.clipboard.writeText(text)
@@ -149,6 +173,19 @@ export default function FileDetail() {
       setTimeout(() => setCopied(false), 1500)
     } catch (err) {
       console.error('Failed to copy:', err)
+    }
+  }
+  const handleGenerateSummary = async () => {
+    setSummarizing(true)
+    setSummaryError(null)
+    try {
+      const updated = await filesService.generateSummary(file.id)
+      setFile((prev) => ({ ...prev, summary: updated.summary }))
+    } catch (err) {
+     console.error('Failed to generate summary:', err)
+      setSummaryError('Could not generate a summary. Please try again.')
+    } finally {
+     setSummarizing(false)
     }
   }
 
@@ -233,7 +270,6 @@ export default function FileDetail() {
                 </button>
                 <button
                   className="dropdown-item dropdown-item-danger"
-                  disabled={isMockFile(file)}
                   onClick={() => {
                     setMenuOpen(false)
                     handleDelete()
@@ -263,7 +299,13 @@ export default function FileDetail() {
         </div>
       </div>
 
-      {isProcessing ? (
+      {file.status === 'error' ? (
+        <div className="card">
+          <div className="card-body processing-notice processing-notice-error">
+            Transcription failed. Please try uploading the file again.
+          </div>
+        </div>
+      ) : isProcessing ? (
         <div className="card">
           <div className="card-body processing-notice">Transcription is still processing&hellip;</div>
         </div>
@@ -283,7 +325,7 @@ export default function FileDetail() {
               Transcript
             </button>
 
-            {activeTab === 'transcript' && !isMockFile(file) && !isEditing && (
+            {activeTab === 'transcript' && !isEditing && (
               <button className="btn btn-outline btn-sm detail-edit-btn" onClick={startEditing}>
                 <PencilIcon /> Edit transcript
               </button>
@@ -292,31 +334,46 @@ export default function FileDetail() {
 
           {activeTab === 'summary' ? (
             <div className="card-body">
-              {file.summary && typeof file.summary === 'object' ? (
+              {isStructuredSummary(file.summary) ? (
                 <>
-                  <p className="summary-overview">{file.summary.overview}</p>
+                  {file.summary.title && <h3 className="summary-title">{file.summary.title}</h3>}
+                  {file.summary.intro && <p className="summary-overview">{file.summary.intro}</p>}
 
-                  <h3 className="summary-subtitle">Key Points</h3>
-                  <ul className="summary-list">
-                    {file.summary.keyPoints.map((point, index) => (
-                      <li key={index}>{point}</li>
-                    ))}
-                  </ul>
+                  {file.summary.sections.map((section, index) => (
+                    <div className="summary-section" key={index}>
+                      <h4 className="summary-subtitle">{section.heading}</h4>
+                      <ul className="summary-list">
+                        {section.points.map((point, pointIndex) => (
+                          <li key={pointIndex}>{point}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
 
                   {file.summary.actionItems?.length > 0 && (
-                    <>
-                      <h3 className="summary-subtitle">Action Items</h3>
+                    <div className="summary-section">
+                      <h4 className="summary-subtitle">Action Items</h4>
                       <ul className="summary-list">
                         {file.summary.actionItems.map((item, index) => (
                           <li key={index}>{item}</li>
                         ))}
                       </ul>
-                    </>
+                    </div>
                   )}
+
+                  <button className="btn btn-outline btn-sm summary-regenerate-btn" onClick={handleGenerateSummary} disabled={summarizing}>
+                    {summarizing ? 'Regenerating…' : 'Regenerate summary'}
+                  </button>
                 </>
               ) : (
-                <p className="summary-overview">No summary available yet.</p>
+                <>
+                  <p className="summary-overview">No summary available yet.</p>
+                  <button className="btn btn-primary btn-sm summary-generate-btn" onClick={handleGenerateSummary} disabled={summarizing}>
+                    {summarizing ? 'Generating…' : 'Generate summary'}
+                  </button>
+                </>
               )}
+              {summaryError && <p className="summary-error">{summaryError}</p>}
             </div>
           ) : (
             <div className="card-body">
@@ -352,10 +409,9 @@ export default function FileDetail() {
                 <div className="transcript-body">
                   {turns.map((turn, index) => (
                     <div className="transcript-entry" key={index}>
-                      {(turn.speaker || turn.time) && (
+                      {turn.speaker && (
                         <div className="transcript-meta">
-                          {turn.speaker && <span className="transcript-speaker">{turn.speaker}</span>}
-                          {turn.time && <span className="transcript-time">{turn.time}</span>}
+                          <span className="transcript-speaker">{turn.speaker}</span>
                         </div>
                       )}
                       <p>{turn.text}</p>

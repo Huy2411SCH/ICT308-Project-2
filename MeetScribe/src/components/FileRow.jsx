@@ -8,11 +8,6 @@ function fileIconFor(type) {
   return <FileTextIcon />
 }
 
-// Mock/demo rows use numeric ids; real Supabase rows use uuid strings.
-function isMockFile(file) {
-  return typeof file.id === 'number'
-}
-
 export default function FileRow({ file, onDeleted }) {
   const navigate = useNavigate()
 
@@ -29,7 +24,6 @@ export default function FileRow({ file, onDeleted }) {
 
   const handleDelete = async (event) => {
     event.stopPropagation()
-    if (isMockFile(file)) return
     if (!window.confirm(`Delete "${file.name}"? This can't be undone.`)) return
     try {
       await filesService.deleteFile(file)
@@ -61,7 +55,7 @@ export default function FileRow({ file, onDeleted }) {
         <button className="btn btn-outline btn-sm" onClick={handleDownload} disabled={!file.media_url}>
           <DownloadIcon /> Download
         </button>
-        <button className="btn btn-ghost btn-sm" onClick={handleDelete} disabled={isMockFile(file)}>
+        <button className="btn btn-ghost btn-sm" onClick={handleDelete}>
           <TrashIcon /> Delete
         </button>
       </div>
