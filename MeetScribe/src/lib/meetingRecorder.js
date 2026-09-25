@@ -4,3 +4,6 @@ const AUDIO_MIME_CANDIDATES = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp
 const VIDEO_MIME_CANDIDATES = [
   'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm', 'video/mp4',
 ]
+export async function startMeetingRecording({ mode = 'audio', onAutoStop } = {}) {
+  
+}
