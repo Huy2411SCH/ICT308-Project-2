@@ -1,15 +1,14 @@
 import { supabase } from './supabaseClient'
+import { apiHeaders } from './apiAuth'
 
 const TRANSCRIBE_ENDPOINT = 'http://localhost:3001/transcribe'
-const SIGNED_URL_TTL_SECONDS = 60 * 60 // long enough for AssemblyAI to fetch the file
+const SIGNED_URL_TTL_SECONDS = 60 * 60 // for download/playback links
 
 export const TRANSCRIPTION_NOT_STARTED_MESSAGE =
   "Your file was saved, but transcription couldn't start. Open it from Your Files to retry."
 
 // Uploads an audio/video file to Supabase Storage, creates its `files` row,
-// and kicks off transcription on the backend. Returns the inserted row. If
-// transcription couldn't be started, the file is still kept and the returned
-// row has status 'error', so the user can retry from the file page.
+// and kicks off transcription on the backend. Returns the inserted row. 
 export async function uploadMediaForTranscription(user, file) {
   const path = `${user.id}/${Date.now()}-${file.name}`
 
@@ -33,7 +32,7 @@ export async function uploadMediaForTranscription(user, file) {
   if (insertError) throw insertError
 
   try {
-    await startTranscription(fileRow.id, path)
+    await startTranscription(fileRow.id)
   } catch (err) {
     console.error('Failed to start transcription:', err)
     return { ...fileRow, status: 'error' }
@@ -45,16 +44,11 @@ export async function uploadMediaForTranscription(user, file) {
 // Asks the backend to transcribe a file that's already in storage. If the
 // backend can't be reached or refuses the job, nothing would ever move the
 // row out of 'processing', so mark it 'error' (retryable) and throw.
-async function startTranscription(fileId, mediaPath) {
-  const { data: signed, error: signError } = await supabase.storage
-    .from('media')
-    .createSignedUrl(mediaPath, SIGNED_URL_TTL_SECONDS)
-  if (signError) throw signError
-
+async function startTranscription(fileId) {
   const res = await fetch(TRANSCRIBE_ENDPOINT, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ fileId, mediaUrl: signed.signedUrl }),
+    headers: await apiHeaders(),
+    body: JSON.stringify({ fileId }),
   }).catch(() => null)
 
   if (!res?.ok) {
@@ -72,7 +66,7 @@ export async function retryTranscription(file) {
     .update({ status: 'processing', processing_started_at: processingStartedAt })
     .eq('id', file.id)
   if (error) throw error
-  await startTranscription(file.id, file.media_url)
+  await startTranscription(file.id)
   return processingStartedAt
 }
 
@@ -90,13 +84,17 @@ export async function fetchFiles() {
   return data
 }
 
-export async function deleteFile(fileId) {
-  const { error } = await supabase.from('files').delete().eq('id', fileId)
+// Removes the file's row and its media from Storage 
+export async function deleteFile(file) {
+  if (file.media_url) {
+    const { error: storageError } = await supabase.storage.from('media').remove([file.media_url])
+    if (storageError) throw storageError
+  }
+  const { error } = await supabase.from('files').delete().eq('id', file.id)
   if (error) throw error
 }
 
-// Calls `onChange` whenever any of the user's files rows change (e.g. status
-// flips from 'processing' to 'ready'). Returns an unsubscribe function.
+// Calls `onChange` whenever any of the user's files rows change. Returns an unsubscribe function.
 export function subscribeToFiles(userId, onChange) {
   const channel = supabase
     .channel('files-changes')
