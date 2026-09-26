@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 
-// Stub out Supabase so importing filesService doesn't need env vars or a network.
+// Mock Supabase so importing filesService doesn't need env vars or a network.
 vi.mock('../supabaseClient', () => ({ supabase: {} }))
 vi.mock('../apiAuth', () => ({ apiHeaders: vi.fn() }))
 
