@@ -1,7 +1,8 @@
 import { supabase } from './supabaseClient'
 import { apiHeaders } from './apiAuth'
 
-const ACCOUNT_ENDPOINT = 'http://localhost:3001/account' // Change when deployed to production
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+const ACCOUNT_ENDPOINT = `${API_URL}/account`
 
 export const authService = {
   async getSession() {
