@@ -1,7 +1,7 @@
 // Client-side password rules, matching Supabase Auth's minimum password length
 // and "lowercase, uppercase letters, digits and symbols" requirement (also set in
 // supabase/config.toml) so users see a clear message instead of a weak_password error.
-export const MIN_PASSWORD_LENGTH = 8
+export const MIN_PASSWORD_LENGTH = 12
 
 export const PASSWORD_HINT =
   `At least ${MIN_PASSWORD_LENGTH} characters, including an uppercase letter, a lowercase letter, a number and a special character`
