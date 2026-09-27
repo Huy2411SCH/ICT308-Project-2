@@ -97,6 +97,14 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute session={session}>
+                <Settings user={session?.user} />
+              </ProtectedRoute>
+            }
+          />
         </Route>
 
         {/* Redirect root to dashboard or homepage */}
