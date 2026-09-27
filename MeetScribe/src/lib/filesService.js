@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient'
+import { apiHeaders } from './apiAuth'
 
 const BUCKET = 'media'
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
@@ -91,7 +92,7 @@ export const filesService = {
   async generateSummary(fileId) {
   const res = await fetch(SUMMARIZE_ENDPOINT, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await apiHeaders(),
     body: JSON.stringify({ fileId }),
   })
   const data = await res.json()

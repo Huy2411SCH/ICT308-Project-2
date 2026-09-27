@@ -354,3 +354,29 @@
   color: var(--color-primary);
   font-weight: 600;
 }
+
+.login-forgot {
+  align-self: flex-end;
+  font-size: 13px;
+  color: var(--color-primary);
+}
+
+.login-success {
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.login-error a {
+  color: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+/* Standalone card pages (forgot/reset password) have no .login-wrap padding. */
+.login-center-padded {
+  padding: 48px 16px;
+}

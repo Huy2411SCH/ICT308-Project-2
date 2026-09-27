@@ -98,7 +98,7 @@ export default function Files({ user }) {
 
   const handleDelete = async (file) => {
     try {
-      await deleteFile(file.id)
+      await deleteFile(file)
       setFiles((prev) => prev.filter((f) => f.id !== file.id))
     } catch (err) {
       setError(err.message)

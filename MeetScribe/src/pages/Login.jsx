@@ -92,6 +92,7 @@ const handleSubmit = async (e) => {
                 placeholder="Enter your password"
                 required
               />
+              <Link to="/forgot-password" className="login-forgot">Forgot password?</Link>
             </div>
 
             {error && <div className="login-error">{error}</div>}
