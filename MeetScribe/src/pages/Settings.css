@@ -31,6 +31,12 @@
   color: var(--color-text-secondary);
 }
 
+.settings-hint {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+
 .settings-field input {
   max-width: 360px;
   padding: 9px 12px;

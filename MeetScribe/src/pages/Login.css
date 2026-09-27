@@ -304,6 +304,11 @@
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 
+.form-hint {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
 .form-group input::placeholder {
   color: var(--color-text-faint);
 }
