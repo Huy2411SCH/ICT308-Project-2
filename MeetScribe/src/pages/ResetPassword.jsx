@@ -3,8 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import './Login.css'
 import { authService } from '../lib/authService'
 import LoginHeader from '../components/LoginHeader'
-
-const MIN_PASSWORD_LENGTH = 6 // matches auth.minimum_password_length in supabase/config.toml
+import { PASSWORD_HINT, validatePassword } from '../lib/passwordPolicy'
 
 // Landing page for the emailed reset link. Supabase exchanges the token in the
 // URL for a session on page load; with that session we can set a new password.
@@ -29,8 +28,9 @@ export default function ResetPassword() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
-    if (password.length < MIN_PASSWORD_LENGTH) {
-      setError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters`)
+    const passwordError = validatePassword(password)
+    if (passwordError) {
+      setError(passwordError)
       return
     }
     if (password !== confirm) {
@@ -70,6 +70,7 @@ export default function ResetPassword() {
             autoComplete="new-password"
             required
           />
+          <span className="form-hint">{PASSWORD_HINT}</span>
         </div>
 
         <div className="form-group">

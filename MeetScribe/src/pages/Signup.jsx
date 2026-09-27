@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import './Login.css'
 import { authService } from '../lib/authService'
 import LoginHeader from '../components/LoginHeader'
+import { MIN_PASSWORD_LENGTH, PASSWORD_HINT, validatePassword } from '../lib/passwordPolicy'
 
 export default function SignUp() {
   const [email, setEmail] = useState('')
@@ -15,6 +16,11 @@ export default function SignUp() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
+    const passwordError = validatePassword(password)
+    if (passwordError) {
+      setError(passwordError)
+      return
+    }
     setLoading(true)
 
     try {
@@ -79,8 +85,10 @@ export default function SignUp() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Create a password"
                 required
-                minLength={6}
+                minLength={MIN_PASSWORD_LENGTH}
+                title={PASSWORD_HINT}
               />
+              <span className="form-hint">{PASSWORD_HINT}</span>
             </div>
 
             {error && <div className="login-error">{error}</div>}

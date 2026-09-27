@@ -49,12 +49,15 @@ export const authService = {
     const { error } = await supabase.auth.updateUser({ password: newPassword })
     if (error) throw error
   },
-  // Changes the password from Settings. Checks the current password first so
-  // someone at an unlocked, signed-in browser can't silently take over the account.
-  async changePassword(email, currentPassword, newPassword) {
-    const { error: verifyError } = await supabase.auth.signInWithPassword({ email, password: currentPassword })
-    if (verifyError?.code === 'invalid_credentials') throw new Error('Current password is incorrect')
-    if (verifyError) throw verifyError
-    await this.updatePassword(newPassword)
+  // Changes the password from Settings. Auth has "Require current password when
+  // updating" on, so the server checks current_password before changing it; this
+  // stops someone at an unlocked, signed-in browser from taking over the account.
+  async changePassword(currentPassword, newPassword) {
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword,
+      current_password: currentPassword,
+    })
+    if (error?.code === 'current_password_invalid') throw new Error('Current password is incorrect')
+    if (error) throw error
   },
 }

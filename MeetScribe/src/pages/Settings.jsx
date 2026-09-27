@@ -2,11 +2,10 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import ErrorBanner from '../components/ErrorBanner'
 import { authService } from '../lib/authService'
+import { PASSWORD_HINT, validatePassword } from '../lib/passwordPolicy'
 import './Settings.css'
 
-const MIN_PASSWORD_LENGTH = 6 // matches auth.minimum_password_length in supabase/config.toml
-
-function ChangePasswordForm({ email }) {
+function ChangePasswordForm() {
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -18,8 +17,9 @@ function ChangePasswordForm({ email }) {
     e.preventDefault()
     setError(null)
     setSuccess(false)
-    if (newPassword.length < MIN_PASSWORD_LENGTH) {
-      setError(`New password must be at least ${MIN_PASSWORD_LENGTH} characters`)
+    const passwordError = validatePassword(newPassword)
+    if (passwordError) {
+      setError(passwordError)
       return
     }
     if (newPassword !== confirmPassword) {
@@ -33,7 +33,7 @@ function ChangePasswordForm({ email }) {
 
     setSaving(true)
     try {
-      await authService.changePassword(email, currentPassword, newPassword)
+      await authService.changePassword(currentPassword, newPassword)
       setCurrentPassword('')
       setNewPassword('')
       setConfirmPassword('')
@@ -66,6 +66,7 @@ function ChangePasswordForm({ email }) {
           autoComplete="new-password"
           required
         />
+        <span className="settings-hint">{PASSWORD_HINT}</span>
       </label>
       <label className="settings-field">
         Confirm new password
@@ -119,7 +120,7 @@ export default function Settings({ user }) {
           <p className="card-subtitle">Enter your current password, then choose a new one.</p>
         </div>
         <div className="card-body">
-          <ChangePasswordForm email={user?.email} />
+          <ChangePasswordForm />
         </div>
       </section>
 
