@@ -1,0 +1,70 @@
+.settings-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 640px;
+}
+
+.settings-title {
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.settings-subtitle {
+  margin-top: -14px;
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
+
+.settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.settings-field input {
+  max-width: 360px;
+  padding: 9px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--color-text-primary);
+  background: var(--color-surface);
+}
+
+.settings-field input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light-2);
+}
+
+/* ErrorBanner brings its own bottom margin; the form gap already spaces it. */
+.settings-form .file-list-error {
+  margin-bottom: 0;
+}
+
+.settings-success {
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+  font-size: 13px;
+}
+
+.danger-zone {
+  border-color: var(--color-danger-bg);
+}
+
+.danger-zone .card-title {
+  color: var(--color-danger-text);
+}

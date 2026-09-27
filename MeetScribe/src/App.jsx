@@ -14,6 +14,9 @@ import Signup from './pages/Signup'
 import Homepage from './pages/Homepage' 
 import Files from './pages/Files'
 import FileDetail from './pages/FileDetail'
+import ForgotPassword from './pages/ForgotPassword'
+import ResetPassword from './pages/ResetPassword'
+import Settings from './pages/Settings'
 function App() {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -69,6 +72,14 @@ function App() {
             session ? <Navigate to="/dashboard" /> : <Signup />
           }
         />
+        <Route
+          path="/forgot-password"
+          element={
+            session ? <Navigate to="/settings" /> : <ForgotPassword />
+          }
+        />
+        {/* Not redirected when signed in: the reset link itself creates the session */}
+        <Route path="/reset-password" element={<ResetPassword />} />
         {/* Protected Routes - With Layout */}
         <Route
           element={<Layout session={session} onLogout={handleLogout} />}

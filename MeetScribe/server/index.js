@@ -234,7 +234,35 @@ app.post('/summarize', async (req, res) => {
   }
 })
 const GEMINI_MODEL = 'gemini-3.6-flash'
- 
+
+// Deletes the signed-in user's account and all their files. The caller must be authenticated and own the account. Returns 204 on success, or an error if not.
+app.delete('/account', async (req, res) => {
+  const token = req.headers.authorization?.match(/^Bearer (.+)$/)?.[1]
+  if (!token) return res.status(401).json({ error: 'Sign in required' })
+
+  const { data: userData, error: authError } = await supabase.auth.getUser(token)
+  if (authError || !userData?.user) return res.status(401).json({ error: 'Sign in required' })
+  const userId = userData.user.id
+
+  try {
+    // Uploads are stored flat under `{userId}/`, so one folder listing covers them.
+    const { data: objects, error: listError } = await supabase.storage.from('media').list(userId, { limit: 1000 })
+    if (listError) throw listError
+    if (objects.length > 0) {
+      const paths = objects.map((o) => `${userId}/${o.name}`)
+      const { error: removeError } = await supabase.storage.from('media').remove(paths)
+      if (removeError) throw removeError
+    }
+
+    const { error: deleteError } = await supabase.auth.admin.deleteUser(userId)
+    if (deleteError) throw deleteError
+
+    res.status(204).end()
+  } catch (err) {
+    console.error(`Account deletion for ${userId} failed:`, err)
+    res.status(500).json({ error: 'Account deletion failed' })
+  }
+})
 // Gemini's Node.js client is an ESM-only package, 
 // so we dynamically import it on first use to avoid breaking the CommonJS server code.
 let geminiClientPromise
