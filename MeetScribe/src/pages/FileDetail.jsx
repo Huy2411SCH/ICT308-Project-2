@@ -342,6 +342,12 @@ export default function FileDetail() {
             <CopyIcon /> {copied ? 'Copied!' : activeTab === 'summary' ? 'Copy summary' : 'Copy transcript'}
           </button>
         </div>
+
+        {file.media_expired && (
+          <p className="media-expired-note">
+            The recording was automatically deleted 7 days after upload. The transcript and summary are still available.
+          </p>
+        )}
       </div>
 
       {file.status === 'error' ? (

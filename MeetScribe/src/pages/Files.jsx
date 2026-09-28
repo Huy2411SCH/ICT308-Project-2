@@ -106,6 +106,7 @@ export default function Files({ user }) {
   }
 
   const handleDownload = async (file) => {
+    if (!file.media_url) return
     try {
       const url = await getMediaDownloadUrl(file.media_url)
       window.open(url, '_blank', 'noopener,noreferrer')
@@ -198,7 +199,12 @@ export default function Files({ user }) {
               </div>
 
               <div className="file-actions" onClick={(event) => event.stopPropagation()}>
-                <button className="btn btn-outline btn-sm" onClick={() => handleDownload(file)}>
+                <button
+                  className="btn btn-outline btn-sm"
+                  onClick={() => handleDownload(file)}
+                  disabled={!file.media_url}
+                  title={file.media_expired ? 'Recording deleted after 7 days' : undefined}
+                >
                   <DownloadIcon /> Download
                 </button>
                 <button className="btn btn-ghost btn-sm" onClick={() => handleDelete(file)}>

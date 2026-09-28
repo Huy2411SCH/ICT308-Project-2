@@ -410,3 +410,7 @@ enabled = true
 # declarative_schema_path = "./database"
 # JSON string passed through to pg-delta SQL formatting.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":80,\"commaStyle\":\"trailing\"}"
+
+# Called by pg_cron with an x-cron-secret header instead of a user JWT.
+[functions.cleanup-expired-media]
+verify_jwt = false
