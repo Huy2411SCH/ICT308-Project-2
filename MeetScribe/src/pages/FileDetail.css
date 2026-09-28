@@ -98,6 +98,15 @@
   color: var(--color-text-muted);
 }
 
+.media-expired-note {
+  margin: 14px 0 0;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--color-warning-text);
+  background: var(--color-warning-bg);
+  border-radius: var(--radius-sm);
+}
+
 .detail-meta-row > span {
   display: flex;
   align-items: center;
