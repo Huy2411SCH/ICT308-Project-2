@@ -19,13 +19,27 @@ export const authService = {
     if (error) throw error
   },
   async signInWithEmail(email) {
-    const { error } = await supabase.auth.signInWithOtp({ email })
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: `${window.location.origin}/dashboard` },
+    })
     if (error) throw error
   },
+  // Signs up a new user and sends a confirmation email. The URL must be in Auth's
+  // allowed redirect list. The user is not signed in until they click the link.
   async signUp(email, password) {
-    const { data, error } = await supabase.auth.signUp({ email, password })
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      // Redirect to /dashboard after the user clicks the confirmation link in their email.
+      options: { emailRedirectTo: `${window.location.origin}/dashboard` },
+    })
     if (error) throw error
-  return data
+    // Return an error if the user already exists - Supabase returns a 200 with an empty user object in this case.
+    if (data.user && data.user.identities?.length === 0) {
+      throw new Error('An account with this email already exists. Try logging in instead.')
+    }
+    return data
   },
   async deleteAccount() {
     const res = await fetch(ACCOUNT_ENDPOINT, { method: 'DELETE', headers: await apiHeaders() })
