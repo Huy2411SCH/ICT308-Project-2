@@ -102,6 +102,18 @@
   color: var(--color-text-muted);
 }
 
+.detail-player {
+  display: block;
+  width: 100%;
+  margin-top: 16px;
+}
+
+.detail-player-video {
+  max-height: 420px;
+  background: #000;
+  border-radius: var(--radius-md);
+}
+
 .media-expired-note {
   margin: 14px 0 0;
   padding: 10px 12px;

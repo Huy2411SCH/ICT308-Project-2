@@ -17,6 +17,7 @@ import {
 } from '../components/icons'
 import { filesService, normalizeDbFile } from '../lib/filesService'
 import { retryTranscription } from '../lib/transcription'
+import { fixUnknownDuration } from '../lib/media'
 import './FileDetail.css'
 
 // How long a file can sit in 'processing' before we offer to retry it.
@@ -119,7 +120,9 @@ export default function FileDetail() {
 
   const [file, setFile] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [mediaUrl, setMediaUrl] = useState(null)
+  // Signed link for the recording, tagged with the storage path it belongs to
+  // so a link for a previously viewed file is never shown for this one.
+  const [signedMedia, setSignedMedia] = useState(null)
   const [activeTab, setActiveTab] = useState('summary')
   const [menuOpen, setMenuOpen] = useState(false)
   const [downloadMenuOpen, setDownloadMenuOpen] = useState(false)
@@ -187,7 +190,7 @@ export default function FileDetail() {
     filesService
       .getFileUrl(file.media_url)
       .then((url) => {
-        if (!cancelled) setMediaUrl(url)
+        if (!cancelled) setSignedMedia({ path: file.media_url, url })
       })
       .catch((err) => console.error('Failed to get file URL:', err))
 
@@ -222,6 +225,7 @@ export default function FileDetail() {
   setSelectedSpeakers([])
   setDraftSummary(null)
   }, [id])
+  const mediaUrl = file?.media_url && signedMedia?.path === file.media_url ? signedMedia.url : null
   const turns = toTurns(file?.transcript)
   const speakers = speakersIn(turns)
   const visibleTurns = selectedSpeakers.length === 0
@@ -527,6 +531,27 @@ const toggleSpeaker = (speaker) => {
             )}
           </div>
         </div>
+
+        {mediaUrl && file.type === 'video' && (
+          <video
+            key={mediaUrl}
+            src={mediaUrl}
+            controls
+            preload="metadata"
+            className="detail-player detail-player-video"
+            onLoadedMetadata={fixUnknownDuration}
+          />
+        )}
+        {mediaUrl && file.type === 'audio' && (
+          <audio
+            key={mediaUrl}
+            src={mediaUrl}
+            controls
+            preload="metadata"
+            className="detail-player"
+            onLoadedMetadata={fixUnknownDuration}
+          />
+        )}
 
         {file.media_expired && (
           <p className="media-expired-note">
