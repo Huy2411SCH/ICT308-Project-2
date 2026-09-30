@@ -126,6 +126,12 @@
   margin-left: auto;
 }
 
+.detail-meta-row .detail-download-btn svg:last-child {
+  width: 12px;
+  height: 12px;
+  margin-left: -2px;
+}
+
 .detail-content-card {
   padding-top: 4px;
 }
