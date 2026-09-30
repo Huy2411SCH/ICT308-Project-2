@@ -5,9 +5,12 @@ const { AssemblyAI } = require('assemblyai')
 const { createClient } = require('@supabase/supabase-js')
 
 const app = express()
-// Only our own frontend may call this API from a browser. CLIENT_ORIGIN can be
-// a comma-separated list (e.g. the local dev server plus the deployed site).
-const allowedOrigins = (process.env.CLIENT_ORIGIN || 'http://localhost:5173').split(',').map((o) => o.trim())
+// CORS checks are done on the client side, so we can allow multiple origins here. The client sends the JWT in an Authorization header, so we don't need to allow credentials.
+const allowedOrigins = (process.env.CLIENT_ORIGIN || 'http://localhost:5173')
+  .split(',')
+  .map((o) => o.trim().replace(/^["']|["']$/g, '').replace(/\/+$/, ''))
+  .filter(Boolean)
+console.log('CORS allowed origins:', allowedOrigins)
 app.use(cors({ origin: allowedOrigins }))
 app.use(express.json())
 
