@@ -11,11 +11,13 @@ import {
   CalendarIcon,
   CopyIcon,
   MoreHorizontalIcon,
+  ChevronDownIcon,
   UsersIcon,
   PencilIcon,
 } from '../components/icons'
 import { filesService, normalizeDbFile } from '../lib/filesService'
 import { retryTranscription } from '../lib/transcription'
+import { fixUnknownDuration } from '../lib/media'
 import './FileDetail.css'
 
 // How long a file can sit in 'processing' before we offer to retry it.
@@ -56,6 +58,56 @@ function turnsToText(turns) {
   return turns.map((turn) => (turn.speaker ? `${turn.speaker}: ${turn.text}` : turn.text)).join('\n\n')
 }
 
+// Builds the plain text for the .txt download: a short header, then the
+// summary (if there is one), then the full transcript.
+function buildExportText(file, turns) {
+  const header = [file.name, `Date: ${file.date}`, file.duration && `Duration: ${file.duration}`].filter(Boolean)
+  const summary = isStructuredSummary(file.summary) ? summaryToText(file.summary) : 'No summary available.'
+  return [
+    ...header,
+    '',
+    'SUMMARY',
+    '=======',
+    summary,
+    '',
+    'TRANSCRIPT',
+    '==========',
+    turnsToText(turns),
+    '',
+  ].join('\n')
+}
+
+// The summary editor works on a draft where each list (points, action items)
+// is one textarea with one item per line, which is easier to edit than
+// separate inputs per bullet.
+function summaryToDraft(summary) {
+  return {
+    title: summary.title || '',
+    intro: summary.intro || '',
+    sections: summary.sections.map((section) => ({
+      heading: section.heading || '',
+      points: section.points.join('\n'),
+    })),
+    actionItems: (summary.actionItems || []).join('\n'),
+  }
+}
+
+function linesOf(text) {
+  return text.split('\n').map((line) => line.trim()).filter(Boolean)
+}
+
+// Converts the draft back into the stored summary shape, dropping empty sections.
+function draftToSummary(draft) {
+  return {
+    title: draft.title.trim(),
+    intro: draft.intro.trim(),
+    sections: draft.sections
+      .map((section) => ({ heading: section.heading.trim(), points: linesOf(section.points) }))
+      .filter((section) => section.heading || section.points.length > 0),
+    actionItems: linesOf(draft.actionItems),
+  }
+}
+
 function speakersIn(turns) {
   return [...new Set(turns.map((turn) => turn.speaker).filter(Boolean))]
 }
@@ -64,12 +116,16 @@ export default function FileDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const menuRef = useRef(null)
+  const downloadMenuRef = useRef(null)
 
   const [file, setFile] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [mediaUrl, setMediaUrl] = useState(null)
+  // Signed link for the recording, tagged with the storage path it belongs to
+  // so a link for a previously viewed file is never shown for this one.
+  const [signedMedia, setSignedMedia] = useState(null)
   const [activeTab, setActiveTab] = useState('summary')
   const [menuOpen, setMenuOpen] = useState(false)
+  const [downloadMenuOpen, setDownloadMenuOpen] = useState(false)
   const [copied, setCopied] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [draftTranscript, setDraftTranscript] = useState('')
@@ -80,6 +136,9 @@ export default function FileDetail() {
   const [retryError, setRetryError] = useState(null)
   const [now, setNow] = useState(() => Date.now())
   const [selectedSpeakers, setSelectedSpeakers] = useState([])
+  const [draftSummary, setDraftSummary] = useState(null)
+  const [savingSummary, setSavingSummary] = useState(false)
+  const [exportingPdf, setExportingPdf] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -131,7 +190,7 @@ export default function FileDetail() {
     filesService
       .getFileUrl(file.media_url)
       .then((url) => {
-        if (!cancelled) setMediaUrl(url)
+        if (!cancelled) setSignedMedia({ path: file.media_url, url })
       })
       .catch((err) => console.error('Failed to get file URL:', err))
 
@@ -153,9 +212,20 @@ export default function FileDetail() {
     document.addEventListener('mousedown', closeOnOutsideClick)
     return () => document.removeEventListener('mousedown', closeOnOutsideClick)
   }, [menuOpen])
+
+  useEffect(() => {
+    if (!downloadMenuOpen) return
+    const closeOnOutsideClick = (event) => {
+      if (downloadMenuRef.current && !downloadMenuRef.current.contains(event.target)) setDownloadMenuOpen(false)
+    }
+    document.addEventListener('mousedown', closeOnOutsideClick)
+    return () => document.removeEventListener('mousedown', closeOnOutsideClick)
+  }, [downloadMenuOpen])
   useEffect(() => {
   setSelectedSpeakers([])
+  setDraftSummary(null)
   }, [id])
+  const mediaUrl = file?.media_url && signedMedia?.path === file.media_url ? signedMedia.url : null
   const turns = toTurns(file?.transcript)
   const speakers = speakersIn(turns)
   const visibleTurns = selectedSpeakers.length === 0
@@ -180,11 +250,14 @@ const toggleSpeaker = (speaker) => {
 
 
 // Returns the text to copy to the clipboard,
-//  depending on the active tab 
+//  depending on the active tab. The transcript copy follows the speaker
+//  filter; while editing, it copies the draft being edited instead.
   const handleCopy = async () => {
     const text = activeTab === 'summary' && isStructuredSummary(file.summary)
       ? summaryToText(file.summary)
-      : turnsToText(turns)
+      : isEditing
+        ? draftTranscript
+        : turnsToText(visibleTurns)
 
 
     try {
@@ -195,6 +268,37 @@ const toggleSpeaker = (speaker) => {
       console.error('Failed to copy:', err)
     }
   }
+  // Saves the summary and full transcript as a .txt file named after the recording.
+  const handleDownloadText = () => {
+    const blob = new Blob([buildExportText(file, turns)], { type: 'text/plain;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `${file.name.replace(/\.[^.]+$/, '') || 'transcript'}.txt`
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
+  // Same content as the .txt download, laid out as a PDF. The PDF library is
+  // loaded only on click so it doesn't weigh down every page load.
+  const handleDownloadPdf = async () => {
+    setExportingPdf(true)
+    try {
+      const { downloadPdf } = await import('../lib/exportPdf')
+      downloadPdf({
+        fileName: file.name,
+        date: file.date,
+        duration: file.duration,
+        summary: isStructuredSummary(file.summary) ? file.summary : null,
+        turns,
+      })
+    } catch (err) {
+      console.error('Failed to create PDF:', err)
+    } finally {
+      setExportingPdf(false)
+    }
+  }
+
   const handleGenerateSummary = async () => {
     setSummarizing(true)
     setSummaryError(null)
@@ -233,6 +337,43 @@ const toggleSpeaker = (speaker) => {
       setRetryError('Could not start transcription. Please try again in a moment.')
     } finally {
       setRetrying(false)
+    }
+  }
+
+  const isEditingSummary = draftSummary !== null
+
+  const startEditingSummary = () => {
+    setSummaryError(null)
+    setDraftSummary(summaryToDraft(file.summary))
+  }
+
+  const updateDraftSection = (index, field, value) => {
+    setDraftSummary((prev) => ({
+      ...prev,
+      sections: prev.sections.map((section, i) => (i === index ? { ...section, [field]: value } : section)),
+    }))
+  }
+
+  const addDraftSection = () => {
+    setDraftSummary((prev) => ({ ...prev, sections: [...prev.sections, { heading: '', points: '' }] }))
+  }
+
+  const removeDraftSection = (index) => {
+    setDraftSummary((prev) => ({ ...prev, sections: prev.sections.filter((_, i) => i !== index) }))
+  }
+
+  const saveSummary = async () => {
+    setSavingSummary(true)
+    setSummaryError(null)
+    try {
+      const updated = await filesService.updateSummary(file.id, draftToSummary(draftSummary))
+      setFile((prev) => ({ ...prev, summary: updated.summary }))
+      setDraftSummary(null)
+    } catch (err) {
+      console.error('Failed to save summary:', err)
+      setSummaryError('Could not save the summary. Please try again.')
+    } finally {
+      setSavingSummary(false)
     }
   }
 
@@ -324,7 +465,7 @@ const toggleSpeaker = (speaker) => {
                     if (mediaUrl) window.open(mediaUrl, '_blank', 'noopener')
                   }}
                 >
-                  <DownloadIcon /> Download
+                  <DownloadIcon /> Download recording
                 </button>
                 <button
                   className="dropdown-item dropdown-item-danger"
@@ -354,7 +495,63 @@ const toggleSpeaker = (speaker) => {
           <button className="btn btn-outline btn-sm detail-copy-btn" onClick={handleCopy} disabled={isProcessing || hasNoSpeech}>
             <CopyIcon /> {copied ? 'Copied!' : activeTab === 'summary' ? 'Copy summary' : 'Copy transcript'}
           </button>
+          <div className="detail-menu" ref={downloadMenuRef}>
+            <button
+              className="btn btn-outline btn-sm detail-download-btn"
+              onClick={() => setDownloadMenuOpen((open) => !open)}
+              disabled={exportingPdf || isProcessing || hasNoSpeech || file.status === 'error'}
+              aria-haspopup="menu"
+              aria-expanded={downloadMenuOpen}
+            >
+              <DownloadIcon /> {exportingPdf ? 'Preparing…' : 'Download'} <ChevronDownIcon />
+            </button>
+            {downloadMenuOpen && (
+              <div className="detail-menu-dropdown" role="menu">
+                <button
+                  className="dropdown-item"
+                  role="menuitem"
+                  onClick={() => {
+                    setDownloadMenuOpen(false)
+                    handleDownloadPdf()
+                  }}
+                >
+                  <FileTextIcon /> PDF (.pdf)
+                </button>
+                <button
+                  className="dropdown-item"
+                  role="menuitem"
+                  onClick={() => {
+                    setDownloadMenuOpen(false)
+                    handleDownloadText()
+                  }}
+                >
+                  <FileTextIcon /> Text (.txt)
+                </button>
+              </div>
+            )}
+          </div>
         </div>
+
+        {mediaUrl && file.type === 'video' && (
+          <video
+            key={mediaUrl}
+            src={mediaUrl}
+            controls
+            preload="metadata"
+            className="detail-player detail-player-video"
+            onLoadedMetadata={fixUnknownDuration}
+          />
+        )}
+        {mediaUrl && file.type === 'audio' && (
+          <audio
+            key={mediaUrl}
+            src={mediaUrl}
+            controls
+            preload="metadata"
+            className="detail-player"
+            onLoadedMetadata={fixUnknownDuration}
+          />
+        )}
 
         {file.media_expired && (
           <p className="media-expired-note">
@@ -402,6 +599,11 @@ const toggleSpeaker = (speaker) => {
               Transcript
             </button>
 
+            {activeTab === 'summary' && isStructuredSummary(file.summary) && !isEditingSummary && (
+              <button className="btn btn-outline btn-sm detail-edit-btn" onClick={startEditingSummary}>
+                <PencilIcon /> Edit summary
+              </button>
+            )}
             {activeTab === 'transcript' && !isEditing && (
               <button className="btn btn-outline btn-sm detail-edit-btn" onClick={startEditing}>
                 <PencilIcon /> Edit transcript
@@ -411,7 +613,78 @@ const toggleSpeaker = (speaker) => {
 
           {activeTab === 'summary' ? (
             <div className="card-body">
-              {isStructuredSummary(file.summary) ? (
+              {isEditingSummary ? (
+                <div className="summary-edit">
+                  <label className="summary-edit-field">
+                    <span className="summary-edit-label">Title</span>
+                    <input
+                      className="summary-edit-input"
+                      value={draftSummary.title}
+                      onChange={(event) => setDraftSummary((prev) => ({ ...prev, title: event.target.value }))}
+                    />
+                  </label>
+                  <label className="summary-edit-field">
+                    <span className="summary-edit-label">Intro</span>
+                    <textarea
+                      className="summary-edit-textarea"
+                      rows={3}
+                      value={draftSummary.intro}
+                      onChange={(event) => setDraftSummary((prev) => ({ ...prev, intro: event.target.value }))}
+                    />
+                  </label>
+
+                  {draftSummary.sections.map((section, index) => (
+                    <div className="summary-edit-section" key={index}>
+                      <div className="summary-edit-section-header">
+                        <input
+                          className="summary-edit-input"
+                          placeholder="Section heading"
+                          value={section.heading}
+                          onChange={(event) => updateDraftSection(index, 'heading', event.target.value)}
+                        />
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-sm"
+                          onClick={() => removeDraftSection(index)}
+                          aria-label={`Remove section ${index + 1}`}
+                        >
+                          <TrashIcon />
+                        </button>
+                      </div>
+                      <textarea
+                        className="summary-edit-textarea"
+                        rows={4}
+                        placeholder="One point per line"
+                        value={section.points}
+                        onChange={(event) => updateDraftSection(index, 'points', event.target.value)}
+                      />
+                    </div>
+                  ))}
+                  <button type="button" className="btn btn-outline btn-sm summary-edit-add" onClick={addDraftSection}>
+                    + Add section
+                  </button>
+
+                  <label className="summary-edit-field">
+                    <span className="summary-edit-label">Action items</span>
+                    <textarea
+                      className="summary-edit-textarea"
+                      rows={3}
+                      placeholder="One action item per line"
+                      value={draftSummary.actionItems}
+                      onChange={(event) => setDraftSummary((prev) => ({ ...prev, actionItems: event.target.value }))}
+                    />
+                  </label>
+
+                  <div className="transcript-edit-actions">
+                    <button className="btn btn-primary btn-sm" onClick={saveSummary} disabled={savingSummary}>
+                      {savingSummary ? 'Saving…' : 'Save'}
+                    </button>
+                    <button className="btn btn-ghost btn-sm" onClick={() => setDraftSummary(null)} disabled={savingSummary}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : isStructuredSummary(file.summary) ? (
                 <>
                   {file.summary.title && <h3 className="summary-title">{file.summary.title}</h3>}
                   {file.summary.intro && <p className="summary-overview">{file.summary.intro}</p>}
@@ -487,6 +760,7 @@ const toggleSpeaker = (speaker) => {
                     onChange={(event) => setDraftTranscript(event.target.value)}
                   />
                   <div className="transcript-edit-actions">
+
                     <button className="btn btn-primary btn-sm" onClick={saveEditing} disabled={saving}>
                       {saving ? 'Saving…' : 'Save'}
                     </button>

@@ -80,6 +80,17 @@ export const filesService = {
     return data
   },
 
+  async updateSummary(fileId, summary) {
+    const { data, error } = await supabase
+      .from('files')
+      .update({ summary })
+      .eq('id', fileId)
+      .select()
+      .single()
+    if (error) throw error
+    return data
+  },
+
   async deleteFile(file) {
     if (file.media_url) {
       const { error: storageError } = await supabase.storage.from(BUCKET).remove([file.media_url])
