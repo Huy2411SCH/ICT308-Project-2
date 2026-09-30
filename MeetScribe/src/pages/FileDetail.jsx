@@ -79,6 +79,7 @@ export default function FileDetail() {
   const [retrying, setRetrying] = useState(false)
   const [retryError, setRetryError] = useState(null)
   const [now, setNow] = useState(() => Date.now())
+  const [selectedSpeakers, setSelectedSpeakers] = useState([])
 
   useEffect(() => {
     let cancelled = false
@@ -152,7 +153,20 @@ export default function FileDetail() {
     document.addEventListener('mousedown', closeOnOutsideClick)
     return () => document.removeEventListener('mousedown', closeOnOutsideClick)
   }, [menuOpen])
+  useEffect(() => {
+  setSelectedSpeakers([])
+  }, [id])
+  const turns = toTurns(file?.transcript)
+  const speakers = speakersIn(turns)
+  const visibleTurns = selectedSpeakers.length === 0
+  ? turns
+  : turns.filter((turn) => selectedSpeakers.includes(turn.speaker))
 
+const toggleSpeaker = (speaker) => {
+  setSelectedSpeakers((prev) =>
+    prev.includes(speaker) ? prev.filter((s) => s !== speaker) : [...prev, speaker]
+  )
+}
   const handleDelete = async () => {
     if (!file) return
     if (!window.confirm(`Delete "${file.name}"? This can't be undone.`)) return
@@ -164,8 +178,7 @@ export default function FileDetail() {
     }
   }
 
-  const turns = toTurns(file?.transcript)
-  const speakers = speakersIn(turns)
+
 // Returns the text to copy to the clipboard,
 //  depending on the active tab 
   const handleCopy = async () => {
@@ -441,14 +454,27 @@ export default function FileDetail() {
             </div>
           ) : (
             <div className="card-body">
-              {speakers.length > 0 && (
+              {speakers.length > 0 && !isEditing && (
                 <div className="speakers-row">
                   <UsersIcon className="speakers-icon" />
                   <span className="speakers-label">Speakers</span>
+                  <button
+                    type="button"
+                    className={`speaker-chip${selectedSpeakers.length === 0 ? ' speaker-chip-active' : ''}`}
+                    onClick={() => setSelectedSpeakers([])}
+                  >
+                    All
+                  </button>
                   {speakers.map((speaker) => (
-                    <span key={speaker} className="badge badge-outline">
+                    <button
+                      type="button"
+                      key={speaker}
+                      className={`speaker-chip${selectedSpeakers.includes(speaker) ? ' speaker-chip-active' : ''}`}
+                      onClick={() => toggleSpeaker(speaker)}
+                      aria-pressed={selectedSpeakers.includes(speaker)}
+                    >
                       {speaker}
-                    </span>
+                    </button>
                   ))}
                 </div>
               )}
@@ -471,7 +497,7 @@ export default function FileDetail() {
                 </div>
               ) : (
                 <div className="transcript-body">
-                  {turns.map((turn, index) => (
+                  {visibleTurns.map((turn, index) => (
                     <div className="transcript-entry" key={index}>
                       {turn.speaker && (
                         <div className="transcript-meta">

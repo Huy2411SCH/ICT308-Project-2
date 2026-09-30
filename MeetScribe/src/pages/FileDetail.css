@@ -287,8 +287,7 @@
   margin-top: 18px;
 }
  
-/* the old rule below was removed: */
-/* .summary-subtitle:not(:first-child) { margin-top: 18px; } */
+
  
 .summary-generate-btn,
 .summary-regenerate-btn {
@@ -299,4 +298,31 @@
   margin-top: 10px;
   font-size: 13px;
   color: var(--color-danger);
+}
+
+
+.speaker-chip {
+  padding: 4px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.speaker-chip:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.speaker-chip-active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+}
+
+.speaker-chip-active:hover {
+  color: #fff;
 }
