@@ -11,6 +11,7 @@ import {
   CalendarIcon,
   CopyIcon,
   MoreHorizontalIcon,
+  ChevronDownIcon,
   UsersIcon,
   PencilIcon,
 } from '../components/icons'
@@ -114,12 +115,14 @@ export default function FileDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const menuRef = useRef(null)
+  const downloadMenuRef = useRef(null)
 
   const [file, setFile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [mediaUrl, setMediaUrl] = useState(null)
   const [activeTab, setActiveTab] = useState('summary')
   const [menuOpen, setMenuOpen] = useState(false)
+  const [downloadMenuOpen, setDownloadMenuOpen] = useState(false)
   const [copied, setCopied] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [draftTranscript, setDraftTranscript] = useState('')
@@ -132,6 +135,7 @@ export default function FileDetail() {
   const [selectedSpeakers, setSelectedSpeakers] = useState([])
   const [draftSummary, setDraftSummary] = useState(null)
   const [savingSummary, setSavingSummary] = useState(false)
+  const [exportingPdf, setExportingPdf] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -205,6 +209,15 @@ export default function FileDetail() {
     document.addEventListener('mousedown', closeOnOutsideClick)
     return () => document.removeEventListener('mousedown', closeOnOutsideClick)
   }, [menuOpen])
+
+  useEffect(() => {
+    if (!downloadMenuOpen) return
+    const closeOnOutsideClick = (event) => {
+      if (downloadMenuRef.current && !downloadMenuRef.current.contains(event.target)) setDownloadMenuOpen(false)
+    }
+    document.addEventListener('mousedown', closeOnOutsideClick)
+    return () => document.removeEventListener('mousedown', closeOnOutsideClick)
+  }, [downloadMenuOpen])
   useEffect(() => {
   setSelectedSpeakers([])
   setDraftSummary(null)
@@ -260,6 +273,26 @@ const toggleSpeaker = (speaker) => {
     link.download = `${file.name.replace(/\.[^.]+$/, '') || 'transcript'}.txt`
     link.click()
     URL.revokeObjectURL(url)
+  }
+
+  // Same content as the .txt download, laid out as a PDF. The PDF library is
+  // loaded only on click so it doesn't weigh down every page load.
+  const handleDownloadPdf = async () => {
+    setExportingPdf(true)
+    try {
+      const { downloadPdf } = await import('../lib/exportPdf')
+      downloadPdf({
+        fileName: file.name,
+        date: file.date,
+        duration: file.duration,
+        summary: isStructuredSummary(file.summary) ? file.summary : null,
+        turns,
+      })
+    } catch (err) {
+      console.error('Failed to create PDF:', err)
+    } finally {
+      setExportingPdf(false)
+    }
   }
 
   const handleGenerateSummary = async () => {
@@ -458,14 +491,41 @@ const toggleSpeaker = (speaker) => {
           <button className="btn btn-outline btn-sm detail-copy-btn" onClick={handleCopy} disabled={isProcessing || hasNoSpeech}>
             <CopyIcon /> {copied ? 'Copied!' : activeTab === 'summary' ? 'Copy summary' : 'Copy transcript'}
           </button>
-          <button
-            className="btn btn-outline btn-sm"
-            onClick={handleDownloadText}
-            disabled={isProcessing || hasNoSpeech || file.status === 'error'}
-            title="Download the summary and transcript as a .txt file"
-          >
-            <DownloadIcon /> Download .txt
-          </button>
+          <div className="detail-menu" ref={downloadMenuRef}>
+            <button
+              className="btn btn-outline btn-sm detail-download-btn"
+              onClick={() => setDownloadMenuOpen((open) => !open)}
+              disabled={exportingPdf || isProcessing || hasNoSpeech || file.status === 'error'}
+              aria-haspopup="menu"
+              aria-expanded={downloadMenuOpen}
+            >
+              <DownloadIcon /> {exportingPdf ? 'Preparing…' : 'Download'} <ChevronDownIcon />
+            </button>
+            {downloadMenuOpen && (
+              <div className="detail-menu-dropdown" role="menu">
+                <button
+                  className="dropdown-item"
+                  role="menuitem"
+                  onClick={() => {
+                    setDownloadMenuOpen(false)
+                    handleDownloadPdf()
+                  }}
+                >
+                  <FileTextIcon /> PDF (.pdf)
+                </button>
+                <button
+                  className="dropdown-item"
+                  role="menuitem"
+                  onClick={() => {
+                    setDownloadMenuOpen(false)
+                    handleDownloadText()
+                  }}
+                >
+                  <FileTextIcon /> Text (.txt)
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         {file.media_expired && (
